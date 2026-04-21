@@ -16226,5 +16226,127 @@
     "synonyms": [
       "separate"
     ]
+  },
+  {
+    "word": "Bi-Encoder",
+    "phonetic": "/baɪ ɪnˈkoʊdər/",
+    "chinese": "双编码器",
+    "category": "信息检索",
+    "examples": [
+      {
+        "en": "A Bi-Encoder independently encodes the query and document into dense vectors, enabling efficient approximate nearest neighbor search.",
+        "zh": "双编码器独立地将查询和文档编码为稠密向量，从而支持高效的近似最近邻搜索。"
+      },
+      {
+        "en": "The Bi-Encoder architecture is commonly used as a first-stage retriever because it allows pre-computing document embeddings offline.",
+        "zh": "双编码器架构常被用作第一阶段检索器，因为它允许离线预计算文档嵌入。"
+      },
+      {
+        "en": "Unlike the Cross-Encoder, the Bi-Encoder sacrifices some accuracy for scalability by encoding the query and passage independently.",
+        "zh": "与交叉编码器不同，双编码器通过独立编码查询和段落，以牺牲部分精度换取可扩展性。"
+      }
+    ],
+    "synonyms": [
+      "dual encoder",
+      "two-tower model"
+    ]
+  },
+  {
+    "word": "Cross-Encoder",
+    "phonetic": "/krɒs ɪnˈkoʊdər/",
+    "chinese": "交叉编码器",
+    "category": "信息检索",
+    "examples": [
+      {
+        "en": "A Cross-Encoder takes the query and document concatenated as input and outputs a relevance score, yielding higher accuracy than a Bi-Encoder.",
+        "zh": "交叉编码器将查询和文档拼接后作为输入，输出相关性分数，精度高于双编码器。"
+      },
+      {
+        "en": "Because the Cross-Encoder attends jointly to both the query and the document, it captures fine-grained interactions that dual encoders miss.",
+        "zh": "由于交叉编码器对查询和文档进行联合注意力计算，它能捕捉双编码器遗漏的细粒度交互信息。"
+      },
+      {
+        "en": "In a two-stage retrieval pipeline, the Cross-Encoder is used as a reranker to refine the candidates returned by the Bi-Encoder.",
+        "zh": "在两阶段检索流程中，交叉编码器被用作重排序器，对双编码器返回的候选结果进行精排。"
+      }
+    ],
+    "synonyms": [
+      "reranker",
+      "interaction-based model"
+    ]
+  },
+  {
+    "word": "post-hoc",
+    "phonetic": "/poʊst hɒk/",
+    "chinese": "事后（的）；后验（的）",
+    "category": "机器学习",
+    "examples": [
+      {
+        "en": "Post-hoc explainability methods such as LIME and SHAP generate explanations after the model has been trained, without modifying its architecture.",
+        "zh": "事后可解释性方法（如LIME和SHAP）在模型训练完成后生成解释，无需修改其架构。"
+      },
+      {
+        "en": "We apply a post-hoc calibration step to align the model's predicted probabilities with empirical frequencies.",
+        "zh": "我们应用一个事后校准步骤，使模型的预测概率与实际频率对齐。"
+      },
+      {
+        "en": "Post-hoc analysis revealed that the performance gap was largely attributable to distribution shift in the test set.",
+        "zh": "事后分析表明，性能差距主要归因于测试集中的分布偏移。"
+      }
+    ],
+    "synonyms": [
+      "after-the-fact",
+      "retrospective"
+    ]
+  },
+  {
+    "word": "heterogeneous",
+    "phonetic": "/ˌhɛtərəˈdʒiːniəs/",
+    "chinese": "异质的；异构的",
+    "category": "机器学习",
+    "examples": [
+      {
+        "en": "The model is trained on a heterogeneous mixture of text, images, and structured tables to improve cross-modal generalization.",
+        "zh": "该模型在由文本、图像和结构化表格构成的异构混合数据上进行训练，以提升跨模态泛化能力。"
+      },
+      {
+        "en": "Federated learning over heterogeneous devices must account for varying computational capacities and data distributions.",
+        "zh": "在异构设备上进行联邦学习时，必须考虑不同的计算能力和数据分布差异。"
+      },
+      {
+        "en": "Knowledge graphs are inherently heterogeneous, containing multiple entity types and relation types that require specialized embedding methods.",
+        "zh": "知识图谱本质上是异构的，包含多种实体类型和关系类型，需要专门的嵌入方法。"
+      }
+    ],
+    "synonyms": [
+      "diverse",
+      "mixed",
+      "non-uniform"
+    ]
+  },
+  {
+    "word": "homogeneous",
+    "phonetic": "/ˌhɒməˈdʒiːniəs/",
+    "chinese": "同质的；同构的",
+    "category": "机器学习",
+    "examples": [
+      {
+        "en": "A homogeneous ensemble combines multiple models of the same type, such as an ensemble of decision trees in a random forest.",
+        "zh": "同质集成将多个相同类型的模型组合在一起，例如随机森林中的决策树集成。"
+      },
+      {
+        "en": "The assumption of homogeneous treatment effects rarely holds in practice, motivating the study of heterogeneous effects.",
+        "zh": "同质处理效应的假设在实践中很少成立，这促使研究者关注异质效应的研究。"
+      },
+      {
+        "en": "Homogeneous coordinates simplify the representation of projective transformations in computer vision pipelines.",
+        "zh": "齐次坐标简化了计算机视觉流程中射影变换的表示。"
+      }
+    ],
+    "synonyms": [
+      "uniform",
+      "consistent",
+      "same-type"
+    ]
   }
 ]
