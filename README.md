@@ -216,3 +216,6 @@ ai-words-study/
 │   └── js/
 └── vocab.db           # SQLite 数据库文件（运行后自动生成）
 ```
+
+
+
