@@ -1,0 +1,305 @@
+Targets: 301 / need-update: 301 (concurrency=3, model=haiku)
+[1/301] ✓ causation (12.3s)
+[2/301] ✓ propensity (17.1s)
+[3/301] ✓ causal (21.3s)
+[4/301] ✓ correlation (9.9s)
+[5/301] ✓ confounder (8.7s)
+[6/301] ✓ intervention (10.8s)
+[7/301] ✓ treatment (12.0s)
+[8/301] ✓ vocabulary (13.9s)
+[9/301] ✓ instruction (7.7s)
+[10/301] ✓ tokenize (12.5s)
+[11/301] ✓ feedback (8.3s)
+[12/301] ✓ coherence (14.1s)
+[13/301] ✓ fluency (12.2s)
+[14/301] ✓ retrieve (11.4s)
+[15/301] ✓ grounded (21.9s)
+[16/301] ✓ augmented (19.8s)
+[17/301] ✓ faithfulness (11.2s)
+[18/301] ✓ fidelity (9.3s)
+[19/301] ✓ greedy (12.9s)
+[20/301] ✓ beam (16.2s)
+[21/301] ✓ emergence (15.6s)
+[22/301] ✓ scaling (11.7s)
+[23/301] ✓ foundation (9.3s)
+[24/301] ✓ semantic (9.2s)
+[25/301] ✓ lexical (9.6s)
+[26/301] ✓ utterance (9.7s)
+[27/301] ✓ dialogue (9.0s)
+[28/301] ✓ syntactic (24.4s)
+[29/301] ✓ summarization (13.9s)
+[30/301] ✓ abstractive (9.4s)
+[31/301] ✓ extractive (10.3s)
+[32/301] ✓ sentiment (10.1s)
+[33/301] ✓ polarity (13.2s)
+[34/301] ✓ entail (9.0s)
+[35/301] ✓ entailment (14.0s)
+[36/301] ✓ coreference (11.9s)
+[37/301] ✓ paraphrase (15.9s)
+[38/301] ✓ parse (11.5s)
+[39/301] ✓ ambiguous (14.7s)
+[40/301] ✓ disambiguate (17.8s)
+[41/301] ✓ ambiguity (15.7s)
+[42/301] ✓ memorization (9.5s)
+[43/301] ✓ memorize (12.3s)
+[44/301] ✓ mixture (13.0s)
+[45/301] ✓ expert (11.6s)
+[46/301] ✓ agentic (9.7s)
+[47/301] ✓ router (11.7s)
+[48/301] ✓ autonomous (11.3s)
+[49/301] ✓ environment (10.3s)
+[50/301] ✓ autonomy (13.3s)
+[51/301] ✓ state (9.0s)
+[52/301] ✓ tool (9.0s)
+[53/301] ✓ observation (13.7s)
+[54/301] ✓ workflow (14.6s)
+[55/301] ✓ invoke (18.1s)
+[56/301] ✓ orchestrate (18.4s)
+[57/301] ✓ cooperative (8.0s)
+[58/301] ✓ horizon (10.7s)
+[59/301] ✓ collaborate (17.1s)
+[60/301] ✓ memory (13.8s)
+[61/301] ✓ reactive (10.5s)
+[62/301] ✓ deliberative (9.8s)
+[63/301] ✓ subgoal (11.7s)
+[64/301] ✓ rollout (12.3s)
+[65/301] ✓ simulate (11.3s)
+[66/301] ✓ simulation (8.9s)
+[67/301] ✓ jailbreak (12.9s)
+[68/301] ✓ bypass (13.2s)
+[69/301] ✓ circumvent (11.7s)
+[70/301] ✓ safeguard (14.2s)
+[71/301] ✓ defense (13.0s)
+[72/301] ✓ vulnerability (11.9s)
+[73/301] ✓ mitigation (12.7s)
+[74/301] ✓ steer (13.8s)
+[75/301] ✓ toxic (13.8s)
+[76/301] ✓ fairness (11.8s)
+[77/301] ✓ privacy (10.3s)
+[78/301] ✓ explainable (10.0s)
+[79/301] ✓ propose (9.2s)
+[80/301] ✓ accountable (11.3s)
+[81/301] ✓ transparent (13.3s)
+[82/301] ✓ formulation (9.5s)
+[83/301] ✓ formulate (11.3s)
+[84/301] ✓ derive (15.8s)
+[85/301] ✓ exploit (10.0s)
+[86/301] ✓ derivation (14.7s)
+[87/301] ✓ harness (11.3s)
+[88/301] ✓ investigate (12.3s)
+[89/301] ✓ examine (12.0s)
+[90/301] ✓ demonstrate (12.5s)
+[91/301] ✓ reveal (12.8s)
+[92/301] ✓ uncover (11.3s)
+[93/301] ✓ address (13.4s)
+[94/301] ✓ tackle (10.5s)
+[95/301] ✓ overcome (9.9s)
+[96/301] ✓ incorporate (8.2s)
+[97/301] ✓ surpass (10.7s)
+[98/301] ✓ decompose (13.9s)
+[99/301] ✓ integrate (22.1s)
+[100/301] ✓ unify (15.0s)
+[101/301] ✓ aggregate (8.9s)
+[102/301] ✓ extract (15.0s)
+[103/301] ✓ iterate (9.4s)
+[104/301] ✓ refine (18.6s)
+[105/301] ✓ theoretical (13.9s)
+[106/301] ✓ efficient (12.1s)
+[107/301] ✓ feasible (12.6s)
+[108/301] ✓ infeasible (8.6s)
+[109/301] ✓ substantial (13.1s)
+[110/301] ✓ significant (15.1s)
+[111/301] ✓ negligible (11.1s)
+[112/301] ✓ comparable (9.2s)
+[113/301] ✓ marginal (17.2s)
+[114/301] ✓ competitive (12.5s)
+[115/301] ✓ superior (13.2s)
+[116/301] ✓ suboptimal (12.4s)
+[117/301] ✓ consistent (14.1s)
+[118/301] ✓ reliable (12.0s)
+[119/301] ✓ thorough (8.6s)
+[120/301] ✓ rigorous (13.6s)
+[121/301] ✓ comprehensive (12.1s)
+[122/301] ✓ nuanced (8.6s)
+[123/301] ✓ exhaustive (12.8s)
+[124/301] ✓ subtle (13.5s)
+[125/301] ✓ coarse-grained (11.9s)
+[126/301] ✓ fine-grained (16.1s)
+[127/301] ✓ hierarchical (8.2s)
+[128/301] ✓ ubiquitous (8.7s)
+[129/301] ✓ holistic (14.2s)
+[130/301] ✓ prevalent (11.9s)
+[131/301] ✓ pervasive (8.3s)
+[132/301] ✓ hypothesis (12.0s)
+[133/301] ✓ assumption (9.3s)
+[134/301] ✓ premise (15.8s)
+[135/301] ✓ conjecture (8.9s)
+[136/301] ✓ theorem (10.3s)
+[137/301] ✓ lemma (10.1s)
+[138/301] ✓ proof (9.4s)
+[139/301] ✓ corollary (15.1s)
+[140/301] ✓ phenomenon (7.7s)
+[141/301] ✓ contribution (10.2s)
+[142/301] ✓ limitation (8.7s)
+[143/301] ✓ survey (19.3s)
+[144/301] ✓ overhead (9.9s)
+[145/301] ✓ caveat (13.2s)
+[146/301] ✓ footprint (11.6s)
+[147/301] ✓ budget (10.3s)
+[148/301] ✓ compute (7.8s)
+[149/301] ✓ tradeoff (16.7s)
+[150/301] ✓ compression (9.6s)
+[151/301] ✓ deploy (13.5s)
+[152/301] ✓ deployment (9.7s)
+[153/301] ✓ serving (18.3s)
+[154/301] ✓ edge (11.4s)
+[155/301] ✓ query (10.5s)
+[156/301] ✓ index (9.1s)
+[157/301] ✓ rerank (10.1s)
+[158/301] ✓ relevant (11.6s)
+[159/301] ✓ candidate (9.5s)
+[160/301] ✓ click (9.8s)
+[161/301] ✓ conversion (10.2s)
+[162/301] ✓ bidding (10.6s)
+[163/301] ✓ advertiser (9.8s)
+[164/301] ✓ keyword (12.6s)
+[165/301] ✓ intent (8.3s)
+[166/301] ✓ CTR (10.9s)
+[167/301] ✓ CPC (8.4s)
+[168/301] ✓ CPM (11.5s)
+[169/301] ✓ throttle (12.9s)
+[170/301] ✓ CPA (17.4s)
+[171/301] ✓ inventory (15.1s)
+[172/301] ✓ surface (13.9s)
+[173/301] ✓ query-log (14.5s)
+[174/301] ✓ recommendation (15.9s)
+[175/301] ✓ recommender (10.0s)
+[176/301] ✓ collaborative (13.3s)
+[176/301] ✗ sparsity: claude exited 1: 
+[177/301] ✓ cold-start (10.3s)
+[177/301] ✗ engagement: claude exited 1: 
+[177/301] ✗ personalized: claude exited 1: 
+[177/301] ✗ novelty: claude exited 1: 
+[178/301] ✓ filtering (17.0s)
+[178/301] ✗ coverage: claude exited 1: 
+[178/301] ✗ catalog: claude exited 1: 
+[178/301] ✗ session: claude exited 1: 
+[178/301] ✗ long-tail: claude exited 1: 
+[178/301] ✗ implicit: claude exited 1: 
+[178/301] ✗ explicit: claude exited 1: 
+[178/301] ✗ campaign: claude exited 1: 
+[178/301] ✗ audience: claude exited 1: 
+[178/301] ✗ segment: claude exited 1: 
+[178/301] ✗ targeting: claude exited 1: 
+[178/301] ✗ attrition: claude exited 1: 
+[178/301] ✗ lookalike: claude exited 1: 
+[178/301] ✗ acquisition: claude exited 1: 
+[178/301] ✗ uplift: claude exited 1: 
+[178/301] ✗ channel: claude exited 1: 
+[178/301] ✗ cohort: claude exited 1: 
+[178/301] ✗ lifetime: claude exited 1: 
+[178/301] ✗ LTV: claude exited 1: 
+[178/301] ✗ ROI: claude exited 1: 
+[178/301] ✗ ROAS: claude exited 1: 
+[178/301] ✗ revenue: claude exited 1: 
+[178/301] ✗ allocation: claude exited 1: 
+[178/301] ✗ experiment: claude exited 1: 
+[178/301] ✗ holdout: claude exited 1: 
+[178/301] ✗ creative: claude exited 1: 
+[178/301] ✗ loan: claude exited 1: 
+[178/301] ✗ credit: claude exited 1: 
+[178/301] ✗ collateral: claude exited 1: 
+[178/301] ✗ risk: claude exited 1: 
+[178/301] ✗ exposure: claude exited 1: 
+[178/301] ✗ liability: claude exited 1: 
+[178/301] ✗ solvency: claude exited 1: 
+[178/301] ✗ liquidity: claude exited 1: 
+[178/301] ✗ fraud: claude exited 1: 
+[178/301] ✗ compliance: claude exited 1: 
+[178/301] ✗ regulatory: claude exited 1: 
+[178/301] ✗ regulation: claude exited 1: 
+[178/301] ✗ disparate: claude exited 1: 
+[178/301] ✗ cutoff: claude exited 1: 
+[178/301] ✗ creditworthy: claude exited 1: 
+[178/301] ✗ creditworthiness: claude exited 1: 
+[178/301] ✗ originate: claude exited 1: 
+[178/301] ✗ origination: claude exited 1: 
+[178/301] ✗ delinquent: claude exited 1: 
+[178/301] ✗ charge-off: claude exited 1: 
+[178/301] ✗ delinquency rate: claude exited 1: 
+[178/301] ✗ utilization: claude exited 1: 
+[178/301] ✗ tenure: claude exited 1: 
+[178/301] ✗ amortization: claude exited 1: 
+[178/301] ✗ interest: claude exited 1: 
+[178/301] ✗ ROC: claude exited 1: 
+[178/301] ✗ KS: claude exited 1: 
+[178/301] ✗ lift: claude exited 1: 
+[178/301] ✗ monitor: claude exited 1: 
+[178/301] ✗ monitoring: claude exited 1: 
+[178/301] ✗ reject: claude exited 1: 
+[178/301] ✗ approve: claude exited 1: 
+[178/301] ✗ elicit: claude exited 1: 
+[178/301] ✗ yield: claude exited 1: 
+[178/301] ✗ render: claude exited 1: 
+[178/301] ✗ attain: claude exited 1: 
+[178/301] ✗ suffice: claude exited 1: 
+[178/301] ✗ hinder: claude exited 1: 
+[178/301] ✗ impede: claude exited 1: 
+[178/301] ✗ facilitate: claude exited 1: 
+[178/301] ✗ enable: claude exited 1: 
+[178/301] ✗ pertain: claude exited 1: 
+[178/301] ✗ align: claude exited 1: 
+[178/301] ✗ deviate: claude exited 1: 
+[178/301] ✗ suppress: claude exited 1: 
+[178/301] ✗ amplify: claude exited 1: 
+[178/301] ✗ attenuate: claude exited 1: 
+[178/301] ✗ encode: claude exited 1: 
+[178/301] ✗ decode: claude exited 1: 
+[178/301] ✗ weight sharing: claude exited 1: 
+[178/301] ✗ freeze: claude exited 1: 
+[178/301] ✗ long-context: claude exited 1: 
+[178/301] ✗ positional: claude exited 1: 
+[178/301] ✗ masking: claude exited 1: 
+[178/301] ✗ masked: claude exited 1: 
+[178/301] ✗ motivate: claude exited 1: 
+[178/301] ✗ motivation: claude exited 1: 
+[178/301] ✗ rationale: claude exited 1: 
+[178/301] ✗ justification: claude exited 1: 
+[178/301] ✗ preliminary: claude exited 1: 
+[178/301] ✗ remainder: claude exited 1: 
+[178/301] ✗ appendix: claude exited 1: 
+[178/301] ✗ instantiate: claude exited 1: 
+[178/301] ✗ SFT: claude exited 1: 
+[178/301] ✗ RAG: claude exited 1: 
+[178/301] ✗ top-k: claude exited 1: 
+[178/301] ✗ top-p: claude exited 1: 
+[178/301] ✗ feedback loop: claude exited 1: 
+[178/301] ✗ popularity: claude exited 1: 
+[178/301] ✗ multi-task: claude exited 1: 
+[178/301] ✗ stress test: claude exited 1: 
+[178/301] ✗ backtest: claude exited 1: 
+[178/301] ✗ vintage: claude exited 1: 
+[178/301] ✗ capital: claude exited 1: 
+[178/301] ✗ provisioning: claude exited 1: 
+[178/301] ✗ trivial: claude exited 1: 
+[178/301] ✗ non-trivial: claude exited 1: 
+[178/301] ✗ canonical: claude exited 1: 
+[178/301] ✗ orthogonal: claude exited 1: 
+[178/301] ✗ paradigmatic: claude exited 1: 
+[178/301] ✗ stem: claude exited 1: 
+[178/301] ✗ underpin: claude exited 1: 
+[178/301] ✗ underlie: claude exited 1: 
+[178/301] ✗ augment: claude exited 1: 
+[178/301] ✗ complement: claude exited 1: 
+[178/301] ✗ supplement: claude exited 1: 
+[178/301] ✗ perspective: claude exited 1: 
+[178/301] ✗ insight: claude exited 1: 
+[178/301] ✗ takeaway: claude exited 1: 
+[178/301] ✗ implication: claude exited 1: 
+[178/301] ✗ highlight: claude exited 1: 
+[178/301] ✗ emphasize: claude exited 1: 
+[178/301] ✗ underscore: claude exited 1: 
+[178/301] ✗ decouple: claude exited 1: 
+
+Done. Success: 55, Failed: 123
+Failed list -> /Users/dikiwi/personal/study/claude-code-projects/ai-words-study/data/enrich_failed.json

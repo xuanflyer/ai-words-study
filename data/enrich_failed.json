@@ -1,0 +1,494 @@
+[
+  {
+    "word": "sparsity",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "engagement",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "personalized",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "novelty",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "coverage",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "catalog",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "session",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "long-tail",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "implicit",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "explicit",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "campaign",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "audience",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "segment",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "targeting",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "attrition",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "lookalike",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "acquisition",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "uplift",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "channel",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "cohort",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "lifetime",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "LTV",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "ROI",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "ROAS",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "revenue",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "allocation",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "experiment",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "holdout",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "creative",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "loan",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "credit",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "collateral",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "risk",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "exposure",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "liability",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "solvency",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "liquidity",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "fraud",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "compliance",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "regulatory",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "regulation",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "disparate",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "cutoff",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "creditworthy",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "creditworthiness",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "originate",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "origination",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "delinquent",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "charge-off",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "delinquency rate",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "utilization",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "tenure",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "amortization",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "interest",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "ROC",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "KS",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "lift",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "monitor",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "monitoring",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "reject",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "approve",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "elicit",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "yield",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "render",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "attain",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "suffice",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "hinder",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "impede",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "facilitate",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "enable",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "pertain",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "align",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "deviate",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "suppress",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "amplify",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "attenuate",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "encode",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "decode",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "weight sharing",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "freeze",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "long-context",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "positional",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "masking",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "masked",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "motivate",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "motivation",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "rationale",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "justification",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "preliminary",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "remainder",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "appendix",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "instantiate",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "SFT",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "RAG",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "top-k",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "top-p",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "feedback loop",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "popularity",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "multi-task",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "stress test",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "backtest",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "vintage",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "capital",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "provisioning",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "trivial",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "non-trivial",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "canonical",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "orthogonal",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "paradigmatic",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "stem",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "underpin",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "underlie",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "augment",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "complement",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "supplement",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "perspective",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "insight",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "takeaway",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "implication",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "highlight",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "emphasize",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "underscore",
+    "error": "claude exited 1: "
+  },
+  {
+    "word": "decouple",
+    "error": "claude exited 1: "
+  }
+]
