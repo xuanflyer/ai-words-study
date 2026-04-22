@@ -101,7 +101,8 @@ async function loadStudyTab() {
       </div>
     `;
 
-    container.innerHTML = s.words.map(w => renderWordCard(w)).join('');
+    const shuffledWords = [...s.words].sort(() => Math.random() - 0.5);
+    container.innerHTML = shuffledWords.map(w => renderWordCard(w)).join('');
   } catch (e) {
     console.error(e);
     document.getElementById('studyCards').innerHTML = '<div class="empty-state"><p>加载失败，请刷新重试</p></div>';
@@ -110,7 +111,7 @@ async function loadStudyTab() {
 
 async function generateSession() {
   try {
-    const data = await api('/api/sessions/generate', { method: 'POST', body: { size: 10 } });
+    const data = await api('/api/sessions/generate', { method: 'POST', body: { size: 15 } });
     if (!data.session) {
       showToast(data.message || '没有更多单词了', 'info');
       return;
@@ -141,7 +142,9 @@ async function startFlashcards() {
       showToast('当前批次没有单词，请先生成新批次', 'info');
       return;
     }
-    flashcardState = { words, index: 0, flipped: false, detailsCache: {}, sessionId: data.session.id };
+    const shuffled = [...words].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, Math.min(8, shuffled.length));
+    flashcardState = { words: selected, index: 0, flipped: false, detailsCache: {}, sessionId: data.session.id };
     document.getElementById('flashcardOverlay').classList.add('active');
     document.body.style.overflow = 'hidden';
     renderFlashcard();
