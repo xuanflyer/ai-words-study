@@ -110,7 +110,7 @@ class VocabDB {
   }
 
   // ============ 词汇查询 ============
-  getWords({ category, is_learned, search, page = 1, limit = 50 } = {}) {
+  getWords({ category, is_learned, search, sort_by, page = 1, limit = 50 } = {}) {
     let where = ['1=1'];
     const params = {};
 
@@ -136,13 +136,26 @@ class VocabDB {
     );
     const { total } = countStmt.get(params);
 
+    const orderMap = {
+      last_reviewed_desc: 'COALESCE(last_reviewed_at, first_seen_at) DESC',
+      last_reviewed_asc: 'COALESCE(last_reviewed_at, first_seen_at) ASC',
+      mastery_desc: 'mastery_level DESC, word ASC',
+      mastery_asc: 'mastery_level ASC, word ASC',
+      review_count_desc: 'review_count DESC, word ASC',
+      review_count_asc: 'review_count ASC, word ASC',
+      remembered_desc: '(SELECT COUNT(*) FROM review_history WHERE word_id = words.id AND result = \'remembered\') DESC, word ASC',
+      remembered_asc: '(SELECT COUNT(*) FROM review_history WHERE word_id = words.id AND result = \'remembered\') ASC, word ASC',
+      forgotten_desc: '(SELECT COUNT(*) FROM review_history WHERE word_id = words.id AND result = \'forgotten\') DESC, word ASC',
+      forgotten_asc: '(SELECT COUNT(*) FROM review_history WHERE word_id = words.id AND result = \'forgotten\') ASC, word ASC',
+      category_asc: 'category ASC, word ASC',
+      word_asc: 'word ASC',
+    };
+    const orderClause = orderMap[sort_by] || 'CASE WHEN is_learned = 1 THEN 1 ELSE 0 END, mastery_level ASC, word ASC';
+
     const stmt = this.db.prepare(`
       SELECT * FROM words
       WHERE ${where.join(' AND ')}
-      ORDER BY
-        CASE WHEN is_learned = 1 THEN 1 ELSE 0 END,
-        mastery_level ASC,
-        word ASC
+      ORDER BY ${orderClause}
       LIMIT @limit OFFSET @offset
     `);
 

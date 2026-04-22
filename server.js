@@ -32,11 +32,12 @@ app.use((req, res, next) => {
 
 // 获取词汇列表
 app.get('/api/words', (req, res) => {
-  const { category, is_learned, search, page, limit } = req.query;
+  const { category, is_learned, search, sort_by, page, limit } = req.query;
   const result = db.getWords({
     category,
     is_learned: is_learned !== undefined ? is_learned === 'true' : undefined,
     search,
+    sort_by,
     page: parseInt(page) || 1,
     limit: parseInt(limit) || 50
   });

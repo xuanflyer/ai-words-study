@@ -72,13 +72,28 @@
           <h2>词库浏览</h2>
           <div class="filters">
             <input type="text" id="searchInput" placeholder="搜索单词或中文..." oninput="debounceSearch()">
-            <select id="categoryFilter" onchange="loadLibrary()">
+            <select id="categoryFilter" onchange="libraryPage=1; loadLibrary()">
               <option value="">全部分类</option>
             </select>
-            <select id="learnedFilter" onchange="loadLibrary()">
+            <select id="learnedFilter" onchange="libraryPage=1; loadLibrary()">
               <option value="">全部状态</option>
               <option value="false">未学会</option>
               <option value="true">已学会</option>
+            </select>
+            <select id="sortFilter" onchange="libraryPage=1; loadLibrary()">
+              <option value="">默认排序</option>
+              <option value="last_reviewed_desc">最近学习 ↓</option>
+              <option value="last_reviewed_asc">最近学习 ↑</option>
+              <option value="mastery_desc">熟练度 ↓</option>
+              <option value="mastery_asc">熟练度 ↑</option>
+              <option value="review_count_desc">学习次数 ↓</option>
+              <option value="review_count_asc">学习次数 ↑</option>
+              <option value="remembered_desc">记住次数 ↓</option>
+              <option value="remembered_asc">记住次数 ↑</option>
+              <option value="forgotten_desc">忘记次数 ↓</option>
+              <option value="forgotten_asc">忘记次数 ↑</option>
+              <option value="category_asc">分类 A-Z</option>
+              <option value="word_asc">单词 A-Z</option>
             </select>
           </div>
         </div>

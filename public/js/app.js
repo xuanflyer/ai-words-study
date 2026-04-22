@@ -379,11 +379,13 @@ async function loadLibrary() {
     const search = document.getElementById('searchInput').value;
     const category = document.getElementById('categoryFilter').value;
     const is_learned = document.getElementById('learnedFilter').value;
+    const sort_by = document.getElementById('sortFilter').value;
 
     const params = new URLSearchParams({ page: libraryPage, limit: 30 });
     if (search) params.set('search', search);
     if (category) params.set('category', category);
     if (is_learned) params.set('is_learned', is_learned);
+    if (sort_by) params.set('sort_by', sort_by);
 
     const data = await api(`/api/words?${params}`);
     const container = document.getElementById('libraryList');
