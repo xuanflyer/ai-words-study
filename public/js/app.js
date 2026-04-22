@@ -26,7 +26,7 @@ function switchTab(tab) {
     case 'review': loadReviewTab(); break;
     case 'library': loadLibrary(); loadCategories(); break;
     case 'stats': loadStats(); break;
-    case 'add': break;
+    case 'add': renderPendingWords(); break;
   }
 }
 
@@ -129,7 +129,8 @@ let flashcardState = {
   words: [],
   index: 0,
   flipped: false,
-  detailsCache: {}
+  detailsCache: {},
+  sessionId: null
 };
 
 async function startFlashcards() {
@@ -140,7 +141,7 @@ async function startFlashcards() {
       showToast('当前批次没有单词，请先生成新批次', 'info');
       return;
     }
-    flashcardState = { words, index: 0, flipped: false, detailsCache: {} };
+    flashcardState = { words, index: 0, flipped: false, detailsCache: {}, sessionId: data.session.id };
     document.getElementById('flashcardOverlay').classList.add('active');
     document.body.style.overflow = 'hidden';
     renderFlashcard();
@@ -257,13 +258,36 @@ async function flashcardReview(remembered) {
     });
     showToast(result.message, remembered ? 'success' : 'info');
     delete flashcardState.detailsCache[w.id];
-    const isLast = flashcardState.index === flashcardState.words.length - 1;
-    if (!isLast) {
-      flashcardState.index++;
+
+    if (remembered && flashcardState.sessionId) {
+      // 从批次中移除已记住的单词
+      try {
+        await api(`/api/sessions/${flashcardState.sessionId}/words/${w.id}`, { method: 'DELETE' });
+      } catch (_) {}
+      flashcardState.words.splice(flashcardState.index, 1);
+      if (flashcardState.words.length === 0) {
+        showToast('批次全部完成！', 'success');
+        closeFlashcards();
+        loadStudyTab();
+        loadHeaderStats();
+        loadDueBadge();
+        return;
+      }
+      // 保持 index 在范围内
+      if (flashcardState.index >= flashcardState.words.length) {
+        flashcardState.index = flashcardState.words.length - 1;
+      }
       flashcardState.flipped = false;
       renderFlashcard();
     } else {
-      renderFlashcard();
+      const isLast = flashcardState.index === flashcardState.words.length - 1;
+      if (!isLast) {
+        flashcardState.index++;
+        flashcardState.flipped = false;
+        renderFlashcard();
+      } else {
+        renderFlashcard();
+      }
     }
     loadHeaderStats();
     loadDueBadge();
@@ -533,35 +557,14 @@ async function loadStats() {
 }
 
 // ============ Add Word ============
-async function addWord(e) {
+async function addWordToPending(e) {
   e.preventDefault();
-  const form = document.getElementById('addForm');
-  const fd = new FormData(form);
-
-  const examples = [];
-  for (let i = 1; i <= 3; i++) {
-    const en = (fd.get(`example${i}_en`) || '').trim();
-    const zh = (fd.get(`example${i}_zh`) || '').trim();
-    if (en) examples.push({ en, zh });
-  }
-
-  const body = {
-    word: fd.get('word').trim(),
-    phonetic: fd.get('phonetic').trim(),
-    chinese: fd.get('chinese').trim(),
-    category: fd.get('category'),
-    examples,
-    synonyms: fd.get('synonyms').split(',').map(s => s.trim()).filter(Boolean)
-  };
-
-  try {
-    const result = await api('/api/words', { method: 'POST', body });
-    showToast(`"${body.word}" 已添加到词库`, 'success');
-    form.reset();
-    loadHeaderStats();
-  } catch (e) {
-    showToast(e.message || '添加失败', 'error');
-  }
+  const input = document.getElementById('pendingWordInput');
+  const word = (input.value || '').trim();
+  if (!word) return;
+  await addToPending(word);
+  input.value = '';
+  input.focus();
 }
 
 // ============ Word Modal ============
@@ -669,6 +672,30 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============ Review Actions ============
+async function removeFromCurrentBatch(id) {
+  if (!flashcardState.sessionId) return;
+  const idx = flashcardState.words.findIndex(w => w.id === id);
+  if (idx === -1) return;
+  try {
+    await api(`/api/sessions/${flashcardState.sessionId}/words/${id}`, { method: 'DELETE' });
+  } catch (_) {}
+  flashcardState.words.splice(idx, 1);
+  if (flashcardState.index >= flashcardState.words.length) {
+    flashcardState.index = Math.max(0, flashcardState.words.length - 1);
+  }
+  const overlay = document.getElementById('flashcardOverlay');
+  if (overlay && overlay.classList.contains('active')) {
+    if (flashcardState.words.length === 0) {
+      showToast('批次全部完成！', 'success');
+      closeFlashcards();
+      loadStudyTab();
+    } else {
+      flashcardState.flipped = false;
+      renderFlashcard();
+    }
+  }
+}
+
 async function reviewWordAction(id, remembered) {
   try {
     const result = await api(`/api/words/${id}/review`, {
@@ -676,6 +703,7 @@ async function reviewWordAction(id, remembered) {
       body: { remembered }
     });
     showToast(result.message, remembered ? 'success' : 'info');
+    if (remembered) await removeFromCurrentBatch(id);
     closeModal();
     refreshCurrentTab();
     loadHeaderStats();
@@ -689,6 +717,7 @@ async function markLearnedAction(id) {
   try {
     await api(`/api/words/${id}/learned`, { method: 'POST' });
     showToast('已标记为学会', 'success');
+    await removeFromCurrentBatch(id);
     closeModal();
     refreshCurrentTab();
     loadHeaderStats();
@@ -862,6 +891,164 @@ async function copyExample(ev, el, stopBubble) {
     showToast('已复制英文例句', 'success');
   } catch (e) {
     showToast('复制失败', 'error');
+  }
+}
+
+// ============ Long Press & Context Menu ============
+let lpTimer = null;
+let lpStartX = 0, lpStartY = 0;
+let contextMenuWord = '';
+
+document.addEventListener('mousedown', lpStart);
+document.addEventListener('touchstart', lpStart, { passive: true });
+document.addEventListener('mouseup', lpCancel);
+document.addEventListener('touchend', lpCancel);
+document.addEventListener('mousemove', (e) => {
+  if (Math.abs(e.clientX - lpStartX) > 8 || Math.abs(e.clientY - lpStartY) > 8) lpCancel();
+});
+document.addEventListener('touchmove', lpCancel, { passive: true });
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#wordContextMenu')) hideContextMenu();
+});
+
+function lpStart(e) {
+  const pt = e.touches ? e.touches[0] : e;
+  lpStartX = pt.clientX;
+  lpStartY = pt.clientY;
+  clearTimeout(lpTimer);
+  lpTimer = setTimeout(() => {
+    const word = getWordAtPoint(lpStartX, lpStartY);
+    if (word) {
+      contextMenuWord = word;
+      showContextMenu(lpStartX, lpStartY, word);
+    }
+  }, 500);
+}
+
+function lpCancel() { clearTimeout(lpTimer); }
+
+function getWordAtPoint(x, y) {
+  let range;
+  if (document.caretRangeFromPoint) {
+    range = document.caretRangeFromPoint(x, y);
+  } else if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(x, y);
+    if (!pos) return null;
+    range = document.createRange();
+    range.setStart(pos.offsetNode, pos.offset);
+  }
+  if (!range || !range.startContainer || range.startContainer.nodeType !== Node.TEXT_NODE) return null;
+
+  const text = range.startContainer.textContent;
+  const offset = range.startOffset;
+  let start = offset, end = offset;
+  while (start > 0 && /[a-zA-Z\-]/.test(text[start - 1])) start--;
+  while (end < text.length && /[a-zA-Z\-]/.test(text[end])) end++;
+  const word = text.slice(start, end);
+  return word.length >= 2 ? word : null;
+}
+
+function showContextMenu(x, y, word) {
+  const menu = document.getElementById('wordContextMenu');
+  document.getElementById('wcmWord').textContent = word;
+  menu.style.left = '0px';
+  menu.style.top = '0px';
+  menu.classList.add('active');
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = x + 12, top = y + 12;
+  if (left + mw > vw - 8) left = x - mw - 12;
+  if (top + mh > vh - 8) top = y - mh - 12;
+  menu.style.left = Math.max(8, left) + 'px';
+  menu.style.top = Math.max(8, top) + 'px';
+}
+
+function hideContextMenu() {
+  document.getElementById('wordContextMenu').classList.remove('active');
+}
+
+function contextMenuSearch(engine) {
+  hideContextMenu();
+  const q = encodeURIComponent(contextMenuWord);
+  const url = engine === 'google'
+    ? `https://www.google.com/search?q=${q}`
+    : `https://www.baidu.com/s?wd=${q}`;
+  window.open(url, '_blank', 'noopener');
+}
+
+function contextMenuAddPending() {
+  hideContextMenu();
+  addToPending(contextMenuWord);
+}
+
+// ============ Pending Words ============
+async function addToPending(word) {
+  try {
+    await api('/api/pending', { method: 'POST', body: { word } });
+    showToast(`"${word}" 已加入待添加词库`, 'success');
+    if (currentTab === 'add') renderPendingWords();
+  } catch (e) {
+    showToast(e.message || '加入失败', 'error');
+  }
+}
+
+async function removeFromPending(id) {
+  try {
+    await api(`/api/pending/${id}`, { method: 'DELETE' });
+    renderPendingWords();
+  } catch (e) {
+    showToast('删除失败', 'error');
+  }
+}
+
+async function savePendingNote(id, note) {
+  try {
+    await api(`/api/pending/${id}`, { method: 'PATCH', body: { note } });
+  } catch (e) {
+    showToast('保存备注失败', 'error');
+  }
+}
+
+async function fillAddFormFromPending(word, id) {
+  const input = document.getElementById('pendingWordInput');
+  if (input) {
+    input.value = word;
+    input.focus();
+  }
+  await removeFromPending(id);
+}
+
+async function renderPendingWords() {
+  const badge = document.getElementById('pendingBadge');
+  const list = document.getElementById('pendingList');
+  if (!badge || !list) return;
+  try {
+    const data = await api('/api/pending');
+    const words = data.words;
+    if (words.length > 0) {
+      badge.textContent = words.length;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+    list.innerHTML = words.length === 0
+      ? '<p class="pending-empty">输入单词或长按例句中的词可加入此列表</p>'
+      : words.map(w => `
+        <div class="pending-word-item" data-id="${w.id}">
+          <div class="pending-word-main">
+            <span class="pending-word-text">${escapeHtml(w.word)}</span>
+            <span class="pending-word-date">${w.added_at.slice(0, 16)}</span>
+          </div>
+          <input class="pending-note-input" type="text" placeholder="备注（可选）" value="${escapeAttr(w.note || '')}"
+            onblur="savePendingNote(${w.id}, this.value)"
+            onkeydown="if(event.key==='Enter'){this.blur()}">
+          <div class="pending-word-actions">
+            <button class="btn btn-primary btn-sm" onclick="fillAddFormFromPending('${escapeAttr(w.word)}', ${w.id})">填入输入框</button>
+            <button class="btn btn-outline btn-sm" onclick="removeFromPending(${w.id})">移除</button>
+          </div>
+        </div>`).join('');
+  } catch (e) {
+    list.innerHTML = '<p class="pending-empty">加载失败，请刷新重试</p>';
   }
 }
 

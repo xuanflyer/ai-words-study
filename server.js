@@ -163,6 +163,13 @@ app.post('/api/sessions/:id/complete', (req, res) => {
   res.json({ success: true });
 });
 
+// 从会话中移除单词（记住后）
+app.delete('/api/sessions/:id/words/:wordId', (req, res) => {
+  const ok = db.removeWordFromSession(parseInt(req.params.id), parseInt(req.params.wordId));
+  if (!ok) return res.status(404).json({ error: '会话不存在' });
+  res.json({ success: true });
+});
+
 // --- 统计 ---
 
 app.get('/api/stats', (req, res) => {
@@ -182,6 +189,36 @@ app.get('/api/history', (req, res) => {
 app.get('/api/categories', (req, res) => {
   const categories = db.getCategories();
   res.json({ categories });
+});
+
+// ============ 待添加词库 ============
+
+// 获取列表
+app.get('/api/pending', (req, res) => {
+  res.json({ words: db.getPendingWords() });
+});
+
+// 添加
+app.post('/api/pending', (req, res) => {
+  const { word, note } = req.body;
+  if (!word || !word.trim()) return res.status(400).json({ error: '单词不能为空' });
+  const result = db.addPendingWord(word, note || '');
+  if (!result.success) return res.status(409).json({ error: result.error });
+  logger.info('待添加词已记录', { word });
+  res.status(201).json(result);
+});
+
+// 更新备注
+app.patch('/api/pending/:id', (req, res) => {
+  const { note } = req.body;
+  db.updatePendingWord(parseInt(req.params.id), note || '');
+  res.json({ success: true });
+});
+
+// 删除
+app.delete('/api/pending/:id', (req, res) => {
+  db.deletePendingWord(parseInt(req.params.id));
+  res.json({ success: true });
 });
 
 // 获取艾宾浩斯间隔配置

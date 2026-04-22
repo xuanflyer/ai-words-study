@@ -60,6 +60,13 @@ class VocabDB {
         completed INTEGER DEFAULT 0
       );
 
+      CREATE TABLE IF NOT EXISTS pending_words (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        word TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        note TEXT DEFAULT '',
+        added_at TEXT DEFAULT (datetime('now', 'localtime'))
+      );
+
       CREATE INDEX IF NOT EXISTS idx_words_next_review ON words(next_review_at);
       CREATE INDEX IF NOT EXISTS idx_words_is_learned ON words(is_learned);
       CREATE INDEX IF NOT EXISTS idx_words_mastery ON words(mastery_level);
@@ -490,6 +497,17 @@ class VocabDB {
     this.db.prepare('UPDATE study_sessions SET completed = 1 WHERE id = ?').run(id);
   }
 
+  removeWordFromSession(sessionId, wordId) {
+    const session = this.db.prepare('SELECT word_ids FROM study_sessions WHERE id = ?').get(sessionId);
+    if (!session) return false;
+    const wordIds = JSON.parse(session.word_ids || '[]');
+    const newWordIds = wordIds.filter(id => id !== wordId);
+    this.db.prepare('UPDATE study_sessions SET word_ids = ? WHERE id = ?').run(
+      JSON.stringify(newWordIds), sessionId
+    );
+    return true;
+  }
+
   // ============ 统计数据 ============
 
   getStats() {
@@ -607,6 +625,33 @@ class VocabDB {
     return this.db.prepare(
       'SELECT DISTINCT category FROM words ORDER BY category'
     ).all().map(r => r.category);
+  }
+
+  // ============ 待添加词库 ============
+  getPendingWords() {
+    return this.db.prepare(
+      'SELECT * FROM pending_words ORDER BY added_at DESC'
+    ).all();
+  }
+
+  addPendingWord(word, note = '') {
+    try {
+      const info = this.db.prepare(
+        'INSERT INTO pending_words (word, note) VALUES (?, ?)'
+      ).run(word.trim(), note.trim());
+      return { success: true, id: info.lastInsertRowid };
+    } catch (e) {
+      if (e.message.includes('UNIQUE')) return { success: false, error: '该词已在待添加列表中' };
+      throw e;
+    }
+  }
+
+  updatePendingWord(id, note) {
+    this.db.prepare('UPDATE pending_words SET note = ? WHERE id = ?').run(note, id);
+  }
+
+  deletePendingWord(id) {
+    this.db.prepare('DELETE FROM pending_words WHERE id = ?').run(id);
   }
 
   close() {

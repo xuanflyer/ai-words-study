@@ -95,55 +95,22 @@
       <!-- 添加单词 -->
       <section id="tab-add" class="tab-content">
         <div class="section-header"><h2>添加新单词</h2></div>
-        <form class="add-form" id="addForm" onsubmit="addWord(event)">
-          <div class="form-group">
-            <label>英文单词 *</label>
-            <input type="text" name="word" required placeholder="e.g. transformer">
+        <form class="add-form" id="addPendingForm" onsubmit="addWordToPending(event)">
+          <div class="form-group" style="display:flex;gap:8px;align-items:flex-end">
+            <div style="flex:1">
+              <label>英文单词</label>
+              <input type="text" id="pendingWordInput" placeholder="输入单词，回车加入待添加词库" autocomplete="off" autocapitalize="none" spellcheck="false">
+            </div>
+            <button type="submit" class="btn btn-primary" style="white-space:nowrap">加入词库</button>
           </div>
-          <div class="form-group">
-            <label>音标</label>
-            <input type="text" name="phonetic" placeholder="e.g. /trænsˈfɔːrmər/">
-          </div>
-          <div class="form-group">
-            <label>中文释义 *</label>
-            <input type="text" name="chinese" required placeholder="e.g. 变换器模型">
-          </div>
-          <div class="form-group">
-            <label>分类</label>
-            <select name="category">
-              <option value="机器学习">机器学习</option>
-              <option value="深度学习">深度学习</option>
-              <option value="大语言模型">大语言模型</option>
-              <option value="智能体">智能体</option>
-              <option value="搜索与广告">搜索与广告</option>
-              <option value="推荐系统">推荐系统</option>
-              <option value="营销">营销</option>
-              <option value="金融信贷">金融信贷</option>
-              <option value="学术论文">学术论文</option>
-              <option value="未分类">未分类</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>例句 1</label>
-            <textarea name="example1_en" rows="2" placeholder="English example sentence from AI paper..."></textarea>
-            <textarea name="example1_zh" rows="1" placeholder="中文翻译..." style="margin-top:4px"></textarea>
-          </div>
-          <div class="form-group">
-            <label>例句 2</label>
-            <textarea name="example2_en" rows="2" placeholder="English example sentence..."></textarea>
-            <textarea name="example2_zh" rows="1" placeholder="中文翻译..." style="margin-top:4px"></textarea>
-          </div>
-          <div class="form-group">
-            <label>例句 3</label>
-            <textarea name="example3_en" rows="2" placeholder="English example sentence..."></textarea>
-            <textarea name="example3_zh" rows="1" placeholder="中文翻译..." style="margin-top:4px"></textarea>
-          </div>
-          <div class="form-group">
-            <label>近义词（逗号分隔）</label>
-            <input type="text" name="synonyms" placeholder="e.g. attention model, seq2seq">
-          </div>
-          <button type="submit" class="btn btn-primary btn-full">添加到词库</button>
         </form>
+        <div class="pending-section" id="pendingSection">
+          <div class="pending-header">
+            <span>待添加词库</span>
+            <span class="badge" id="pendingBadge" style="display:none">0</span>
+          </div>
+          <div class="pending-list" id="pendingList"><p class="pending-empty">输入单词或长按例句中的词可加入此列表</p></div>
+        </div>
       </section>
     </main>
 
@@ -169,6 +136,14 @@
         <button class="btn btn-ghost" id="fcNextBtn" onclick="flashcardNext()">下一个 →</button>
       </div>
       <div class="flashcard-hint">空格翻面 · ←/→ 切换 · A/S/D 展开例句 · ↑ 记住 ↓ 忘记 · Esc 退出</div>
+    </div>
+
+    <!-- 长按选词菜单 -->
+    <div class="word-context-menu" id="wordContextMenu">
+      <div class="wcm-word" id="wcmWord"></div>
+      <button class="wcm-item" onclick="contextMenuSearch('baidu')">百度搜索</button>
+      <button class="wcm-item" onclick="contextMenuSearch('google')">Google 搜索</button>
+      <button class="wcm-item" onclick="contextMenuAddPending()">加入待添加词库</button>
     </div>
 
     <!-- Toast 提示 -->
