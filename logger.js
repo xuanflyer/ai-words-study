@@ -3,7 +3,10 @@ const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
 const CURRENT_LEVEL = LEVELS[process.env.LOG_LEVEL] ?? LEVELS.info;
 
 function ts() {
-  return new Date().toISOString().replace('T', ' ').slice(0, 23);
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const ms = String(d.getMilliseconds()).padStart(3, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${ms}`;
 }
 
 function log(level, msg, meta) {

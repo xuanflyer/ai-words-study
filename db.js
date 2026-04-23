@@ -3,6 +3,17 @@ const path = require('path');
 const fs = require('fs');
 const logger = require('./logger');
 
+function localNow() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+function localDate() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+}
+
 // 艾宾浩斯记忆曲线复习间隔（天数）
 // Level 0: 新词，立即学习
 // Level 1: 1天后复习
@@ -218,7 +229,7 @@ class VocabDB {
 
   // 获取需要复习的单词（next_review_at <= 当前时间）
   getDueWords(limit = 10) {
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = localNow();
     return this.db.prepare(`
       SELECT * FROM words
       WHERE is_learned = 0
@@ -364,7 +375,7 @@ class VocabDB {
     if (!word) return null;
 
     const now = new Date();
-    const nowStr = now.toISOString().slice(0, 19).replace('T', ' ');
+    const nowStr = localNow();
     const oldLevel = word.mastery_level;
     let newLevel;
 
@@ -384,7 +395,8 @@ class VocabDB {
       next.setDate(next.getDate() + intervalDays);
       // 设置为当天早上8点
       next.setHours(8, 0, 0, 0);
-      nextReview = next.toISOString().slice(0, 19).replace('T', ' ');
+      const pad = n => String(n).padStart(2, '0');
+      nextReview = `${next.getFullYear()}-${pad(next.getMonth()+1)}-${pad(next.getDate())} 08:00:00`;
     }
 
     // 更新单词状态
@@ -433,7 +445,7 @@ class VocabDB {
 
   // 取消已学会标记（重新加入学习）
   unmarkLearned(id) {
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = localNow();
     this.db.prepare(`
       UPDATE words SET
         is_learned = 0,
@@ -455,7 +467,7 @@ class VocabDB {
     });
 
     // 标记新词的 first_seen_at
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = localNow();
     const markSeen = this.db.prepare(`
       UPDATE words SET
         first_seen_at = COALESCE(first_seen_at, @now),
@@ -470,7 +482,7 @@ class VocabDB {
   }
 
   getTodaySessions() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDate();
     const sessions = this.db.prepare(`
       SELECT * FROM study_sessions
       WHERE date(created_at) = @today
@@ -567,7 +579,7 @@ class VocabDB {
     `).all();
 
     // 今日复习量
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDate();
     const todayReviews = this.db.prepare(`
       SELECT COUNT(*) as count FROM review_history
       WHERE date(reviewed_at) = @today
@@ -607,7 +619,8 @@ class VocabDB {
     for (let i = 0; i < days.length; i++) {
       const expected = new Date(today);
       expected.setDate(expected.getDate() - i);
-      const expectedStr = expected.toISOString().slice(0, 10);
+      const pad = n => String(n).padStart(2, '0');
+      const expectedStr = `${expected.getFullYear()}-${pad(expected.getMonth()+1)}-${pad(expected.getDate())}`;
       if (days[i] === expectedStr) {
         streak++;
       } else {
