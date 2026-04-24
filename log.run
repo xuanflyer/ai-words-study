@@ -1,8 +1,7 @@
 nohup: ignoring input
-[2026-04-23 11:39:43.956] INFO  数据库连接已关闭
 npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
 
-added 106 packages, and audited 107 packages in 2s
+added 106 packages, and audited 107 packages in 1s
 
 23 packages are looking for funding
   run `npm fund` for details
@@ -17,6 +16,22 @@ Run `npm audit` for details.
 > ai-vocab-study@1.0.0 start
 > node server.js
 
-[2026-04-23 19:39:45.893] INFO  数据库已连接 {"path":"/home/admin/xuan/ai-words-study/vocab.db"}
-[2026-04-23 19:39:45.924] INFO  词库已加载 {"count":683}
-[2026-04-23 19:39:45.992] INFO  AI论文词汇学习系统已启动 {"url":"http://localhost:3000","pushTimes":"08:00, 12:00, 18:00, 20:00","ebbinghausIntervals":"0, 1, 2, 4, 7, 15, 30 天"}
+
+/home/admin/xuan/ai-words-study/node_modules/better-sqlite3/lib/methods/pragma.js:10
+	const stmt = this[cppdb].prepare(`PRAGMA ${source}`, this, true);
+	                         ^
+SqliteError: database disk image is malformed
+    at Database.pragma (/home/admin/xuan/ai-words-study/node_modules/better-sqlite3/lib/methods/pragma.js:10:27)
+    at new VocabDB (/home/admin/xuan/ai-words-study/db.js:42:13)
+    at Object.<anonymous> (/home/admin/xuan/ai-words-study/server.js:11:12)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+  code: 'SQLITE_CORRUPT'
+}
+
+Node.js v22.22.0
