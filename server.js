@@ -313,6 +313,26 @@ app.get('/api/kids/categories', (req, res) => {
   res.json({ categories });
 });
 
+// 故事列表
+const storiesData = require('./data/kids_stories.json');
+app.get('/api/kids/stories', (req, res) => {
+  const list = (storiesData.stories || []).map(s => ({
+    id: s.id,
+    title: s.title,
+    cover: s.cover,
+    bg: s.bg,
+    summary: s.summary
+  }));
+  res.json({ stories: list });
+});
+
+// 故事详情
+app.get('/api/kids/stories/:id', (req, res) => {
+  const story = (storiesData.stories || []).find(s => s.id === req.params.id);
+  if (!story) return res.status(404).json({ error: '未找到故事' });
+  res.json(story);
+});
+
 // SPA fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

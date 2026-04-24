@@ -735,3 +735,173 @@ function showEnglishComplete() {
   speakEn('Great job!');
   createStarBurst(); setTimeout(createStarBurst,500);
 }
+
+// ============ 故事模块 ============
+let storyState = { story:null, paraIndex:0, playing:false, rate:0.85 };
+
+async function loadStoryHome() {
+  const grid = document.getElementById('storyGrid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="kids-message">加载中...</div>';
+  try {
+    const res = await fetch('/api/kids/stories').then(r => r.json());
+    const stories = res.stories || [];
+    if (stories.length === 0) {
+      grid.innerHTML = '<div class="kids-message">暂无故事</div>';
+      return;
+    }
+    grid.innerHTML = stories.map(s => `
+      <div class="kids-story-card" style="background:${s.bg}" onclick="openStory('${s.id}')">
+        <div class="kids-story-cover">${s.cover}</div>
+        <div class="kids-story-info">
+          <div class="kids-story-title">${s.title}</div>
+          <div class="kids-story-summary">${s.summary}</div>
+        </div>
+        <div class="kids-story-play">▶</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('加载故事失败:', e);
+    grid.innerHTML = '<div class="kids-message">加载失败，请重试</div>';
+  }
+}
+
+async function openStory(id) {
+  try {
+    const story = await fetch(`/api/kids/stories/${id}`).then(r => r.json());
+    if (!story || !story.paragraphs) {
+      showToast('故事加载失败');
+      return;
+    }
+    storyState = { story, paraIndex:0, playing:false, rate:0.85 };
+    switchView('story-read');
+    renderStoryReader();
+  } catch (e) {
+    console.error('打开故事失败:', e);
+    showToast('网络错误');
+  }
+}
+
+function renderStoryReader() {
+  const reader = document.getElementById('storyReader');
+  const { story, paraIndex, playing, rate } = storyState;
+  if (!reader || !story) return;
+
+  const total = story.paragraphs.length;
+  const pct = Math.round(((paraIndex + 1) / total) * 100);
+
+  reader.innerHTML = `
+    <div class="kids-story-header" style="background:${story.bg}">
+      <button class="kids-story-back" onclick="exitStory()" aria-label="返回">←</button>
+      <div class="kids-story-cover-big">${story.cover}</div>
+      <div class="kids-story-title-big">${story.title}</div>
+    </div>
+    <div class="kids-story-progress">
+      <div class="kids-story-progress-text">第 ${paraIndex + 1} / ${total} 页</div>
+      <div class="kids-story-progress-bar"><div class="kids-story-progress-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="kids-story-text" onclick="playCurrent()">${story.paragraphs[paraIndex]}</div>
+    <div class="kids-story-controls">
+      <button class="kids-story-btn" onclick="prevParagraph()" ${paraIndex === 0 ? 'disabled' : ''}>⬅ 上一页</button>
+      <button class="kids-story-btn kids-story-btn-main" onclick="togglePlay()">
+        ${playing ? '⏸ 暂停' : '▶ 播放'}
+      </button>
+      <button class="kids-story-btn" onclick="nextParagraph()" ${paraIndex >= total - 1 ? 'disabled' : ''}>下一页 ➡</button>
+    </div>
+    <div class="kids-story-rate">
+      <span class="kids-story-rate-label">语速</span>
+      <button class="kids-story-rate-btn ${rate === 0.7 ? 'active' : ''}" onclick="setStoryRate(0.7)">慢</button>
+      <button class="kids-story-rate-btn ${rate === 0.85 ? 'active' : ''}" onclick="setStoryRate(0.85)">中</button>
+      <button class="kids-story-rate-btn ${rate === 1 ? 'active' : ''}" onclick="setStoryRate(1)">快</button>
+    </div>
+  `;
+}
+
+function playCurrent() {
+  const { story, paraIndex, rate } = storyState;
+  if (!story) return;
+  speak(story.paragraphs[paraIndex], rate);
+}
+
+function togglePlay() {
+  if (storyState.playing) {
+    window.speechSynthesis.cancel();
+    storyState.playing = false;
+    renderStoryReader();
+  } else {
+    startAutoPlay();
+  }
+}
+
+function startAutoPlay() {
+  const { story, rate } = storyState;
+  if (!story) return;
+  storyState.playing = true;
+  renderStoryReader();
+  speakParagraph();
+}
+
+function speakParagraph() {
+  const { story, paraIndex, rate, playing } = storyState;
+  if (!story || !playing) return;
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(story.paragraphs[paraIndex]);
+  u.lang = 'zh-CN';
+  u.rate = rate;
+  u.pitch = 1.1;
+  u.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const zhVoice = voices.find(v => v.lang.startsWith('zh'));
+  if (zhVoice) u.voice = zhVoice;
+  u.onend = () => {
+    if (!storyState.playing) return;
+    if (storyState.paraIndex < storyState.story.paragraphs.length - 1) {
+      storyState.paraIndex++;
+      renderStoryReader();
+      setTimeout(speakParagraph, 600);
+    } else {
+      storyState.playing = false;
+      renderStoryReader();
+      createStarBurst();
+      showToast('故事讲完啦！🎉');
+    }
+  };
+  window.speechSynthesis.speak(u);
+}
+
+function prevParagraph() {
+  if (storyState.paraIndex > 0) {
+    storyState.paraIndex--;
+    window.speechSynthesis.cancel();
+    storyState.playing = false;
+    renderStoryReader();
+    setTimeout(playCurrent, 200);
+  }
+}
+
+function nextParagraph() {
+  if (storyState.story && storyState.paraIndex < storyState.story.paragraphs.length - 1) {
+    storyState.paraIndex++;
+    window.speechSynthesis.cancel();
+    storyState.playing = false;
+    renderStoryReader();
+    setTimeout(playCurrent, 200);
+  }
+}
+
+function setStoryRate(rate) {
+  storyState.rate = rate;
+  const wasPlaying = storyState.playing;
+  window.speechSynthesis.cancel();
+  storyState.playing = false;
+  renderStoryReader();
+  if (wasPlaying) startAutoPlay();
+  else setTimeout(playCurrent, 150);
+}
+
+function exitStory() {
+  window.speechSynthesis.cancel();
+  storyState = { story:null, paraIndex:0, playing:false, rate:0.85 };
+  switchView('story-home');
+}
