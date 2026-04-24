@@ -3,6 +3,29 @@ let currentTab = 'study';
 let libraryPage = 1;
 let searchTimer = null;
 
+// ============ TTS (English) — 有道词典真人发音 ============
+const _ttsAudio = new Audio();
+_ttsAudio.volume = 1;
+
+function speakWord(word, type = 1) {
+  // type: 1 = 美式发音, 2 = 英式发音
+  if (!word) return;
+  _ttsAudio.pause();
+  _ttsAudio.currentTime = 0;
+  const src = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=${type}`;
+  _ttsAudio.src = src;
+  _ttsAudio.play().catch(() => {
+    // 有道不可用时回退到 Web Speech API
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(word);
+      u.lang = 'en-US';
+      u.rate = 0.8;
+      window.speechSynthesis.speak(u);
+    }
+  });
+}
+
 // ============ Init ============
 document.addEventListener('DOMContentLoaded', () => {
   loadHeaderStats();
@@ -182,17 +205,17 @@ async function renderFlashcard() {
   const frontHtml = `
     <div class="fc-face fc-front">
       <div class="fc-category"><span class="category-tag">${escapeHtml(w.category || '')}</span></div>
-      <div class="fc-word">${escapeHtml(w.word)}</div>
+      <div class="fc-word" onclick="event.stopPropagation(); speakWord('${escapeAttr(w.word)}')" title="🔊 点击听发音" style="cursor:pointer">${escapeHtml(w.word)}</div>
       ${w.phonetic ? `<div class="fc-phonetic">${escapeHtml(w.phonetic)}</div>` : ''}
       <div class="fc-mastery">${renderMasteryDots(w.mastery_level)}</div>
-      <div class="fc-tap-hint">点击查看释义</div>
+      <div class="fc-tap-hint">点击单词听发音 · 点击卡片查看释义</div>
     </div>
   `;
 
   const d = details || w;
   const backHtml = `
     <div class="fc-face fc-back">
-      <div class="fc-word-small">${escapeHtml(d.word)}${d.phonetic ? ` <span class="fc-phonetic-inline">${escapeHtml(d.phonetic)}</span>` : ''}</div>
+      <div class="fc-word-small" onclick="event.stopPropagation(); speakWord('${escapeAttr(d.word)}')" title="🔊 点击听发音" style="cursor:pointer">${escapeHtml(d.word)} 🔊${d.phonetic ? ` <span class="fc-phonetic-inline">${escapeHtml(d.phonetic)}</span>` : ''}</div>
       <div class="fc-chinese">${escapeHtml(d.chinese || '')}</div>
       ${d.examples && d.examples.length > 0 ? `
         <div class="fc-section-label">例句 <span class="example-hint">点击或按 A / S / D 查看中文</span></div>
@@ -581,7 +604,7 @@ async function openWordModal(id) {
 
     let html = `
       <div class="modal-header">
-        <div class="word-title">${escapeHtml(w.word)}</div>
+        <div class="word-title" onclick="speakWord('${escapeAttr(w.word)}')" title="🔊 点击听发音" style="cursor:pointer">${escapeHtml(w.word)} <span style="font-size:0.5em;opacity:0.6">🔊</span></div>
         <div class="word-phonetic">${escapeHtml(w.phonetic || '')}</div>
       </div>
       <div class="modal-body">
@@ -750,6 +773,7 @@ function renderWordCard(w, showReviewBtns = false) {
   const levelClass = w.is_learned ? 'learned' : `mastery-${w.mastery_level}`;
   return `
     <div class="word-card ${levelClass}" onclick="openWordModal(${w.id})">
+      <div class="word-speak-btn" onclick="event.stopPropagation(); speakWord('${escapeAttr(w.word)}')" title="🔊 听发音">🔊</div>
       <div class="word-title">${escapeHtml(w.word)}</div>
       <div class="word-meta">
         ${renderMasteryDots(w.mastery_level)}

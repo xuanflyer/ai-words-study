@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const cron = require('node-cron');
-const { VocabDB, REVIEW_INTERVALS } = require('./db');
+const { VocabDB, REVIEW_INTERVALS, KIDS_REVIEW_INTERVALS } = require('./db');
 const logger = require('./logger');
 
 const app = express();
@@ -11,6 +11,8 @@ const PORT = process.env.PORT || 3000;
 const db = new VocabDB(path.join(__dirname, 'vocab.db'));
 const seedCount = db.seedVocabulary();
 logger.info('词库已加载', { count: seedCount });
+const kidsSeedCount = db.seedKidsChars();
+logger.info('儿童字库已加载', { count: kidsSeedCount });
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -237,6 +239,78 @@ app.get('/api/ebbinghaus', (req, res) => {
       'Level 7: 已掌握'
     ]
   });
+});
+
+// ============ 儿童学习模块 ============
+
+// 儿童学习页面
+app.get('/kids', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'kids.html'));
+});
+
+// 字库列表
+app.get('/api/kids/chars', (req, res) => {
+  const { category, is_learned, sort_by } = req.query;
+  const chars = db.getKidsChars({
+    category,
+    is_learned: is_learned !== undefined ? is_learned === 'true' : undefined,
+    sort_by
+  });
+  res.json({ chars });
+});
+
+// 单字详情
+app.get('/api/kids/chars/:id', (req, res) => {
+  const char = db.getKidsChar(parseInt(req.params.id));
+  if (!char) return res.status(404).json({ error: '未找到该字' });
+  res.json(char);
+});
+
+// 复习
+app.post('/api/kids/chars/:id/review', (req, res) => {
+  const { known } = req.body;
+  if (typeof known !== 'boolean') {
+    return res.status(400).json({ error: 'known 字段必须为布尔值' });
+  }
+  const result = db.reviewKidsChar(parseInt(req.params.id), known);
+  if (!result) return res.status(404).json({ error: '未找到该字' });
+  logger.info('儿童复习结果', { id: result.id, char: result.char, known, levelChange: `${result.oldLevel}->${result.newLevel}` });
+  res.json(result);
+});
+
+// 生成学习批次
+app.post('/api/kids/sessions/generate', (req, res) => {
+  const force = req.body.force === true;
+  const result = db.generateKidsSession({ force });
+  if (!result.canStudy) {
+    return res.json({ message: result.error, session: null });
+  }
+  logger.info('儿童学习批次已生成', { sessionId: result.session.id, due: result.session.dueCount, new: result.session.newCount });
+  res.json(result);
+});
+
+// 今日会话
+app.get('/api/kids/sessions/today', (req, res) => {
+  const sessions = db.getTodayKidsSessions();
+  res.json({ sessions });
+});
+
+// 完成会话
+app.post('/api/kids/sessions/:id/complete', (req, res) => {
+  db.completeKidsSession(parseInt(req.params.id));
+  res.json({ success: true });
+});
+
+// 统计数据
+app.get('/api/kids/stats', (req, res) => {
+  const stats = db.getKidsStats();
+  res.json(stats);
+});
+
+// 分类列表
+app.get('/api/kids/categories', (req, res) => {
+  const categories = db.getKidsCategories();
+  res.json({ categories });
 });
 
 // SPA fallback

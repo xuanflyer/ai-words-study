@@ -247,6 +247,26 @@ a { color: var(--primary); text-decoration: none; }
   align-items: center;
   gap: 8px;
 }
+.word-speak-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: all 0.2s;
+  padding: 4px;
+  border-radius: 50%;
+  line-height: 1;
+}
+.word-speak-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+  background: rgba(99,102,241,0.1);
+}
+.word-card:hover .word-speak-btn {
+  opacity: 0.7;
+}
 .card-review-btns {
   display: flex;
   gap: 6px;

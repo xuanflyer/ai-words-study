@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>宝贝学习乐园</title>
+  <meta name="description" content="趣味儿童学习乐园——识字、算数、英语，科学记忆，快乐成长">
+  <link rel="stylesheet" href="/css/kids.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌈</text></svg>">
+</head>
+<body>
+  <div id="kidsApp">
+    <!-- 顶部导航 -->
+    <header class="kids-header">
+      <div class="kids-logo" id="kidsLogo" onclick="goHub()">🌈 宝贝乐园</div>
+      <a href="/" class="kids-back-btn">返回首页</a>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="kids-main">
+
+      <!-- ===== Hub 总览 ===== -->
+      <section id="view-hub" class="kids-view active">
+        <div class="kids-hero">
+          <div class="kids-hero-emoji">🎓</div>
+          <h1 class="kids-hero-title">今天学什么？</h1>
+          <p class="kids-hero-subtitle">选一个模块，开始今天的学习之旅吧！</p>
+        </div>
+
+        <div class="kids-module-grid">
+          <!-- 识字模块 -->
+          <div class="kids-module-card module-literacy" onclick="enterModule('literacy')">
+            <div class="kids-module-icon">📖</div>
+            <div class="kids-module-info">
+              <div class="kids-module-name">趣味识字</div>
+              <div class="kids-module-desc">认识新的汉字，变成小博士</div>
+            </div>
+            <div class="kids-module-arrow">›</div>
+          </div>
+
+          <!-- 算数模块 -->
+          <div class="kids-module-card module-math" onclick="enterModule('math')">
+            <div class="kids-module-icon">🔢</div>
+            <div class="kids-module-info">
+              <div class="kids-module-name">趣味算数</div>
+              <div class="kids-module-desc">加减乘除，算数小天才</div>
+            </div>
+            <div class="kids-module-arrow">›</div>
+          </div>
+
+          <!-- 英语模块 -->
+          <div class="kids-module-card module-english" onclick="enterModule('english')">
+            <div class="kids-module-icon">🔤</div>
+            <div class="kids-module-info">
+              <div class="kids-module-name">英语基础</div>
+              <div class="kids-module-desc">ABC字母和简单单词</div>
+            </div>
+            <div class="kids-module-arrow">›</div>
+          </div>
+        </div>
+
+        <!-- 总览统计卡片 -->
+        <div class="kids-streak-card">
+          <div class="kids-streak-fire">🔥</div>
+          <div class="kids-streak-info">
+            <div class="kids-streak-count" id="hubStreak">0</div>
+            <div class="kids-streak-label">连续打卡天数</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 识字子模块 ===== -->
+
+      <!-- 识字 - 首页 -->
+      <section id="view-home" class="kids-view">
+        <div class="kids-hero">
+          <div class="kids-hero-emoji">📚</div>
+          <h1 class="kids-hero-title">趣味识字</h1>
+          <p class="kids-hero-subtitle">每天认识新的字，变成小博士！</p>
+        </div>
+
+        <div class="kids-streak-card">
+          <div class="kids-streak-fire">🔥</div>
+          <div class="kids-streak-info">
+            <div class="kids-streak-count" id="homeStreak">0</div>
+            <div class="kids-streak-label">连续打卡天数</div>
+          </div>
+        </div>
+
+        <div class="kids-progress-card">
+          <div class="kids-progress-title">📊 学习进度</div>
+          <div class="kids-progress-row">
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="homeLearned">0</div>
+              <div class="kids-progress-label">已学会</div>
+            </div>
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="homeTotal">0</div>
+              <div class="kids-progress-label">总字数</div>
+            </div>
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="homeAccuracy">0%</div>
+              <div class="kids-progress-label">正确率</div>
+            </div>
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="homeTodayReviews">0</div>
+              <div class="kids-progress-label">今日学习</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="kids-start-btn" id="startStudyBtn" onclick="startStudy()">
+          开始学习 🚀
+        </button>
+        <button class="kids-start-btn" id="manualStudyBtn" onclick="startStudy(true)" style="background:linear-gradient(135deg,var(--kids-purple),var(--kids-blue));box-shadow:0 8px 24px rgba(139,92,246,0.4);font-size:18px;padding:14px;display:none">
+          📝 手动生成学习卡片
+        </button>
+        <div class="kids-message" id="homeMessage" style="display:none"></div>
+      </section>
+
+      <!-- 识字 - 字库 -->
+      <section id="view-library" class="kids-view">
+        <div class="kids-library-filters">
+          <select class="kids-filter-select" id="libCategoryFilter" onchange="loadLibrary()">
+            <option value="">全部分类</option>
+          </select>
+          <select class="kids-filter-select" id="libLearnedFilter" onchange="loadLibrary()">
+            <option value="">全部状态</option>
+            <option value="false">未学会</option>
+            <option value="true">已学会</option>
+          </select>
+          <select class="kids-filter-select" id="libSortFilter" onchange="loadLibrary()">
+            <option value="">默认排序</option>
+            <option value="last_reviewed_desc">最近学习</option>
+            <option value="review_count_desc">最多学习</option>
+            <option value="correct_desc">最多正确</option>
+            <option value="error_desc">最多错误</option>
+            <option value="mastery_asc">最差评分</option>
+          </select>
+        </div>
+        <div class="kids-char-grid" id="charGrid"></div>
+      </section>
+
+      <!-- 识字 - 统计 -->
+      <section id="view-stats" class="kids-view">
+        <div class="kids-stats-overview">
+          <div class="kids-stat-card">
+            <div class="kids-stat-emoji">📝</div>
+            <div class="kids-stat-num green" id="statsLearned">0</div>
+            <div class="kids-stat-label">已学会</div>
+          </div>
+          <div class="kids-stat-card">
+            <div class="kids-stat-emoji">🔥</div>
+            <div class="kids-stat-num orange" id="statsStreak">0</div>
+            <div class="kids-stat-label">连续打卡</div>
+          </div>
+          <div class="kids-stat-card">
+            <div class="kids-stat-emoji">🎯</div>
+            <div class="kids-stat-num blue" id="statsAccuracy">0%</div>
+            <div class="kids-stat-label">正确率</div>
+          </div>
+          <div class="kids-stat-card">
+            <div class="kids-stat-emoji">📖</div>
+            <div class="kids-stat-num purple" id="statsTotalReviews">0</div>
+            <div class="kids-stat-label">总学习次数</div>
+          </div>
+        </div>
+
+        <div class="kids-chart-card">
+          <div class="kids-chart-title">📈 学习趋势</div>
+          <div class="kids-chart-tabs">
+            <button class="kids-chart-tab active" data-mode="daily" onclick="switchChartMode('daily')">按日</button>
+            <button class="kids-chart-tab" data-mode="weekly" onclick="switchChartMode('weekly')">按周</button>
+            <button class="kids-chart-tab" data-mode="monthly" onclick="switchChartMode('monthly')">按月</button>
+          </div>
+          <div id="chartContainer"></div>
+        </div>
+
+        <div class="kids-chart-card">
+          <div class="kids-chart-title">📂 分类掌握</div>
+          <div id="categoryStatsContainer"></div>
+        </div>
+      </section>
+
+      <!-- ===== 算数子模块 ===== -->
+
+      <!-- 算数 - 首页 -->
+      <section id="view-math-home" class="kids-view">
+        <div class="kids-hero">
+          <div class="kids-hero-emoji">🔢</div>
+          <h1 class="kids-hero-title">趣味算数</h1>
+          <p class="kids-hero-subtitle">动动小脑筋，算数小天才！</p>
+        </div>
+
+        <div class="kids-progress-card">
+          <div class="kids-progress-title">🎮 选择难度</div>
+          <div class="kids-difficulty-grid">
+            <button class="kids-difficulty-btn" onclick="startMathGame('easy')">
+              <span class="kids-difficulty-emoji">🌟</span>
+              <span class="kids-difficulty-name">简单</span>
+              <span class="kids-difficulty-desc">10以内加减</span>
+            </button>
+            <button class="kids-difficulty-btn" onclick="startMathGame('medium')">
+              <span class="kids-difficulty-emoji">⭐</span>
+              <span class="kids-difficulty-name">中等</span>
+              <span class="kids-difficulty-desc">20以内加减</span>
+            </button>
+            <button class="kids-difficulty-btn" onclick="startMathGame('hard')">
+              <span class="kids-difficulty-emoji">🌠</span>
+              <span class="kids-difficulty-name">挑战</span>
+              <span class="kids-difficulty-desc">100以内加减</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="kids-progress-card">
+          <div class="kids-progress-title">📊 算数记录</div>
+          <div class="kids-progress-row">
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="mathTotal">0</div>
+              <div class="kids-progress-label">总题数</div>
+            </div>
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="mathCorrect">0</div>
+              <div class="kids-progress-label">答对</div>
+            </div>
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="mathAccuracy">0%</div>
+              <div class="kids-progress-label">正确率</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 算数 - 练习 -->
+      <section id="view-math-practice" class="kids-view">
+        <div class="kids-math-arena" id="mathArena"></div>
+      </section>
+
+      <!-- ===== 英语子模块 ===== -->
+
+      <!-- 英语 - 首页 -->
+      <section id="view-english-home" class="kids-view">
+        <div class="kids-hero">
+          <div class="kids-hero-emoji">🔤</div>
+          <h1 class="kids-hero-title">英语基础</h1>
+          <p class="kids-hero-subtitle">认识字母和简单单词，Hello World！</p>
+        </div>
+
+        <div class="kids-progress-card">
+          <div class="kids-progress-title">📚 学习内容</div>
+          <div class="kids-difficulty-grid">
+            <button class="kids-difficulty-btn" onclick="startEnglishGame('alphabet')">
+              <span class="kids-difficulty-emoji">🅰️</span>
+              <span class="kids-difficulty-name">字母</span>
+              <span class="kids-difficulty-desc">26个英文字母</span>
+            </button>
+            <button class="kids-difficulty-btn" onclick="startEnglishGame('words')">
+              <span class="kids-difficulty-emoji">🍎</span>
+              <span class="kids-difficulty-name">单词</span>
+              <span class="kids-difficulty-desc">日常简单单词</span>
+            </button>
+            <button class="kids-difficulty-btn" onclick="startEnglishGame('colors')">
+              <span class="kids-difficulty-emoji">🎨</span>
+              <span class="kids-difficulty-name">颜色</span>
+              <span class="kids-difficulty-desc">认识各种颜色</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="kids-progress-card">
+          <div class="kids-progress-title">📊 英语记录</div>
+          <div class="kids-progress-row">
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="engTotal">0</div>
+              <div class="kids-progress-label">总题数</div>
+            </div>
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="engCorrect">0</div>
+              <div class="kids-progress-label">答对</div>
+            </div>
+            <div class="kids-progress-item">
+              <div class="kids-progress-num" id="engAccuracy">0%</div>
+              <div class="kids-progress-label">正确率</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 英语 - 练习 -->
+      <section id="view-english-practice" class="kids-view">
+        <div class="kids-english-arena" id="englishArena"></div>
+      </section>
+
+    </main>
+
+    <!-- 底部 Tab 导航 -->
+    <nav class="kids-tabs" id="kidsTabs">
+      <!-- Hub 模式下的 tabs -->
+      <button class="kids-tab active" data-view="hub" onclick="switchView('hub')">
+        <span class="kids-tab-icon">🏠</span>
+        <span class="kids-tab-label">首页</span>
+      </button>
+    </nav>
+
+    <!-- 学习全屏浮层（识字） -->
+    <div class="kids-study-overlay" id="studyOverlay">
+      <div class="kids-study-topbar">
+        <span class="kids-study-progress-text" id="studyProgressText">0 / 0</span>
+        <div class="kids-study-progress-bar">
+          <div class="kids-study-progress-fill" id="studyProgressFill" style="width:0%"></div>
+        </div>
+        <button class="kids-study-close" onclick="closeStudyOverlay()" aria-label="关闭">×</button>
+      </div>
+      <div class="kids-study-content" id="studyContent"></div>
+    </div>
+
+    <!-- 算数全屏浮层 -->
+    <div class="kids-study-overlay" id="mathOverlay">
+      <div class="kids-study-topbar">
+        <span class="kids-study-progress-text" id="mathProgressText">0 / 10</span>
+        <div class="kids-study-progress-bar">
+          <div class="kids-study-progress-fill" id="mathProgressFill" style="width:0%"></div>
+        </div>
+        <button class="kids-study-close" onclick="closeMathOverlay()" aria-label="关闭">×</button>
+      </div>
+      <div class="kids-study-content" id="mathContent"></div>
+    </div>
+
+    <!-- 英语全屏浮层 -->
+    <div class="kids-study-overlay" id="englishOverlay">
+      <div class="kids-study-topbar">
+        <span class="kids-study-progress-text" id="englishProgressText">0 / 10</span>
+        <div class="kids-study-progress-bar">
+          <div class="kids-study-progress-fill" id="englishProgressFill" style="width:0%"></div>
+        </div>
+        <button class="kids-study-close" onclick="closeEnglishOverlay()" aria-label="关闭">×</button>
+      </div>
+      <div class="kids-study-content" id="englishContent"></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="kids-toast-container" id="kidsToastContainer"></div>
+  </div>
+
+  <script src="/js/kids.js"></script>
+</body>
+</html>

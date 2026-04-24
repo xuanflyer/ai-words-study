@@ -25,6 +25,17 @@ function localDate() {
 // Level 7: 已掌握
 const REVIEW_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
 
+// 儿童艾宾浩斯间隔（比成人更密集）
+// Level 0: 新字
+// Level 1: 4小时后（当天巩固）
+// Level 2: 1天
+// Level 3: 3天
+// Level 4: 7天
+// Level 5: 14天
+// Level 6: 30天
+// Level 7: 已掌握
+const KIDS_REVIEW_INTERVALS = [0, 0.17, 1, 3, 7, 14, 30];
+
 class VocabDB {
   constructor(dbPath) {
     this.db = new Database(dbPath);
@@ -85,6 +96,7 @@ class VocabDB {
       CREATE INDEX IF NOT EXISTS idx_review_history_date ON review_history(reviewed_at);
       CREATE INDEX IF NOT EXISTS idx_sessions_time ON study_sessions(scheduled_time);
     `);
+    this.initKids();
   }
 
   // ============ 词汇数据导入 ============
@@ -680,10 +692,444 @@ class VocabDB {
     this.db.prepare('DELETE FROM pending_words WHERE id = ?').run(id);
   }
 
+  // ============ 儿童识字模块 ============
+
+  initKids() {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS kids_chars (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        char TEXT NOT NULL UNIQUE,
+        pinyin TEXT NOT NULL,
+        category TEXT DEFAULT '基础',
+        difficulty INTEGER DEFAULT 1,
+        frequency INTEGER DEFAULT 5,
+        components TEXT DEFAULT '[]',
+        images TEXT DEFAULT '[]',
+        mastery_level INTEGER DEFAULT 0,
+        review_count INTEGER DEFAULT 0,
+        correct_count INTEGER DEFAULT 0,
+        first_seen_at TEXT,
+        last_reviewed_at TEXT,
+        next_review_at TEXT,
+        is_learned INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+      );
+
+      CREATE TABLE IF NOT EXISTS kids_char_reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        char_id INTEGER NOT NULL,
+        reviewed_at TEXT DEFAULT (datetime('now','localtime')),
+        result TEXT NOT NULL CHECK(result IN ('known','unknown')),
+        mastery_before INTEGER,
+        mastery_after INTEGER,
+        FOREIGN KEY (char_id) REFERENCES kids_chars(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS kids_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        char_ids TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        completed INTEGER DEFAULT 0,
+        completed_at TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_kids_chars_next_review ON kids_chars(next_review_at);
+      CREATE INDEX IF NOT EXISTS idx_kids_chars_learned ON kids_chars(is_learned);
+      CREATE INDEX IF NOT EXISTS idx_kids_reviews_char ON kids_char_reviews(char_id);
+      CREATE INDEX IF NOT EXISTS idx_kids_reviews_date ON kids_char_reviews(reviewed_at);
+    `);
+  }
+
+  seedKidsChars() {
+    const charPath = path.join(__dirname, 'data', 'kids_chars.json');
+    if (!fs.existsSync(charPath)) return 0;
+    const chars = JSON.parse(fs.readFileSync(charPath, 'utf-8'));
+
+    const insert = this.db.prepare(`
+      INSERT INTO kids_chars (char, pinyin, category, difficulty, frequency, components, images)
+      VALUES (@char, @pinyin, @category, @difficulty, @frequency, @components, @images)
+      ON CONFLICT(char) DO UPDATE SET
+        pinyin = excluded.pinyin,
+        category = excluded.category,
+        difficulty = excluded.difficulty,
+        frequency = excluded.frequency,
+        components = excluded.components,
+        images = excluded.images
+    `);
+
+    const insertMany = this.db.transaction((items) => {
+      for (const c of items) {
+        insert.run({
+          char: c.char,
+          pinyin: c.pinyin,
+          category: c.category || '基础',
+          difficulty: c.difficulty || 1,
+          frequency: c.frequency || 5,
+          components: JSON.stringify(c.components || []),
+          images: JSON.stringify(c.images || [])
+        });
+      }
+    });
+
+    insertMany(chars);
+    return chars.length;
+  }
+
+  getKidsChars({ category, is_learned, sort_by } = {}) {
+    let where = ['1=1'];
+    const params = {};
+
+    if (category) {
+      where.push('k.category = @category');
+      params.category = category;
+    }
+    if (is_learned !== undefined) {
+      where.push('k.is_learned = @is_learned');
+      params.is_learned = is_learned ? 1 : 0;
+    }
+
+    const orderMap = {
+      last_reviewed_desc: 'COALESCE(k.last_reviewed_at, k.created_at) DESC',
+      review_count_desc: 'k.review_count DESC',
+      correct_desc: 'k.correct_count DESC',
+      error_desc: '(k.review_count - k.correct_count) DESC',
+      mastery_asc: 'k.mastery_level ASC',
+      mastery_desc: 'k.mastery_level DESC',
+      difficulty_asc: 'k.difficulty ASC',
+      category_asc: 'k.category ASC, k.char ASC',
+    };
+    const orderClause = orderMap[sort_by] || 'k.category ASC, k.difficulty ASC, k.id ASC';
+
+    const stmt = this.db.prepare(`
+      SELECT k.* FROM kids_chars k
+      WHERE ${where.join(' AND ')}
+      ORDER BY ${orderClause}
+    `);
+
+    return stmt.all(params).map(c => ({
+      ...c,
+      components: JSON.parse(c.components || '[]'),
+      images: JSON.parse(c.images || '[]'),
+      is_learned: !!c.is_learned
+    }));
+  }
+
+  getKidsChar(id) {
+    const c = this.db.prepare('SELECT * FROM kids_chars WHERE id = ?').get(id);
+    if (!c) return null;
+    c.components = JSON.parse(c.components || '[]');
+    c.images = JSON.parse(c.images || '[]');
+    c.is_learned = !!c.is_learned;
+
+    const history = this.db.prepare(
+      'SELECT * FROM kids_char_reviews WHERE char_id = ? ORDER BY reviewed_at DESC LIMIT 20'
+    ).all(id);
+
+    return { ...c, history };
+  }
+
+  reviewKidsChar(id, known) {
+    const c = this.db.prepare('SELECT * FROM kids_chars WHERE id = ?').get(id);
+    if (!c) return null;
+
+    const now = new Date();
+    const nowStr = localNow();
+    const oldLevel = c.mastery_level;
+    let newLevel;
+
+    if (known) {
+      newLevel = Math.min(oldLevel + 1, 7);
+    } else {
+      newLevel = Math.max(0, oldLevel - 1);
+    }
+
+    // 计算下次复习时间（使用儿童间隔）
+    let nextReview = null;
+    if (newLevel < 7) {
+      const intervalDays = KIDS_REVIEW_INTERVALS[newLevel] || 30;
+      const next = new Date(now.getTime() + intervalDays * 24 * 3600 * 1000);
+      next.setHours(8, 0, 0, 0);
+      const pad = n => String(n).padStart(2, '0');
+      nextReview = `${next.getFullYear()}-${pad(next.getMonth()+1)}-${pad(next.getDate())} 08:00:00`;
+    }
+
+    const isLearned = newLevel >= 7 ? 1 : 0;
+
+    this.db.prepare(`
+      UPDATE kids_chars SET
+        mastery_level = @newLevel,
+        review_count = review_count + 1,
+        correct_count = correct_count + @correct,
+        first_seen_at = COALESCE(first_seen_at, @now),
+        last_reviewed_at = @now,
+        next_review_at = @nextReview,
+        is_learned = @isLearned
+      WHERE id = @id
+    `).run({ id, newLevel, correct: known ? 1 : 0, now: nowStr, nextReview, isLearned });
+
+    this.db.prepare(`
+      INSERT INTO kids_char_reviews (char_id, reviewed_at, result, mastery_before, mastery_after)
+      VALUES (@char_id, @reviewed_at, @result, @mastery_before, @mastery_after)
+    `).run({
+      char_id: id,
+      reviewed_at: nowStr,
+      result: known ? 'known' : 'unknown',
+      mastery_before: oldLevel,
+      mastery_after: newLevel
+    });
+
+    return { id, char: c.char, oldLevel, newLevel, nextReview, isLearned: !!isLearned };
+  }
+
+  getTodayKidsSessions() {
+    const today = localDate();
+    return this.db.prepare(`
+      SELECT * FROM kids_sessions
+      WHERE date(created_at) = @today
+      ORDER BY created_at DESC
+    `).all({ today }).map(s => ({
+      ...s,
+      char_ids: JSON.parse(s.char_ids || '[]')
+    }));
+  }
+
+  generateKidsSession({ force = false } = {}) {
+    // 检查今日会话数（手动模式跳过限制）
+    const todaySessions = this.getTodayKidsSessions();
+    if (!force && todaySessions.length >= 2) {
+      return { error: '今天学习完成啦！明天再来！🌟', canStudy: false };
+    }
+
+    // 检查间隔（至少4小时，手动模式跳过）
+    if (!force && todaySessions.length > 0) {
+      const lastSession = todaySessions[0];
+      const lastTime = new Date(lastSession.created_at.replace(' ', 'T'));
+      const now = new Date();
+      const hoursDiff = (now - lastTime) / (1000 * 3600);
+      if (hoursDiff < 4) {
+        const waitHours = Math.ceil(4 - hoursDiff);
+        return { error: `休息一下吧！${waitHours}小时后再来学习！🎈`, canStudy: false };
+      }
+    }
+
+    // 选择复习字（到期的，最多3个）
+    const now = localNow();
+    const dueChars = this.db.prepare(`
+      SELECT * FROM kids_chars
+      WHERE is_learned = 0
+        AND next_review_at IS NOT NULL
+        AND next_review_at <= @now
+        AND mastery_level < 7
+      ORDER BY mastery_level ASC, next_review_at ASC
+      LIMIT 3
+    `).all({ now }).map(c => ({
+      ...c,
+      components: JSON.parse(c.components || '[]'),
+      images: JSON.parse(c.images || '[]'),
+      is_learned: false,
+      isNew: false
+    }));
+
+    // 选择新字（最多2个，总数不超过5）
+    const newSlots = Math.min(2, 5 - dueChars.length);
+    const newChars = newSlots > 0 ? this.db.prepare(`
+      SELECT * FROM kids_chars
+      WHERE is_learned = 0
+        AND first_seen_at IS NULL
+      ORDER BY difficulty ASC, frequency DESC
+      LIMIT @limit
+    `).all({ limit: newSlots }).map(c => ({
+      ...c,
+      components: JSON.parse(c.components || '[]'),
+      images: JSON.parse(c.images || '[]'),
+      is_learned: false,
+      isNew: true
+    })) : [];
+
+    const chars = [...dueChars, ...newChars];
+    if (chars.length === 0) {
+      return { error: '太棒了！所有字都学会啦！🎉', canStudy: false };
+    }
+
+    // 创建会话
+    const charIds = chars.map(c => c.id);
+    const result = this.db.prepare(`
+      INSERT INTO kids_sessions (char_ids) VALUES (@ids)
+    `).run({ ids: JSON.stringify(charIds) });
+
+    // 标记新字的 first_seen_at
+    const nowStr = localNow();
+    const markSeen = this.db.prepare(`
+      UPDATE kids_chars SET
+        first_seen_at = COALESCE(first_seen_at, @now),
+        next_review_at = COALESCE(next_review_at, @now)
+      WHERE id = @id AND first_seen_at IS NULL
+    `);
+    for (const id of charIds) {
+      markSeen.run({ id, now: nowStr });
+    }
+
+    return {
+      canStudy: true,
+      session: {
+        id: result.lastInsertRowid,
+        chars,
+        dueCount: dueChars.length,
+        newCount: newChars.length,
+        totalToday: todaySessions.length + 1
+      }
+    };
+  }
+
+  completeKidsSession(id) {
+    const nowStr = localNow();
+    this.db.prepare(
+      'UPDATE kids_sessions SET completed = 1, completed_at = @now WHERE id = @id'
+    ).run({ id, now: nowStr });
+  }
+
+  getKidsStats() {
+    const total = this.db.prepare('SELECT COUNT(*) as c FROM kids_chars').get().c;
+    const learned = this.db.prepare('SELECT COUNT(*) as c FROM kids_chars WHERE is_learned = 1').get().c;
+    const inProgress = this.db.prepare(
+      'SELECT COUNT(*) as c FROM kids_chars WHERE is_learned = 0 AND first_seen_at IS NOT NULL'
+    ).get().c;
+    const notStarted = this.db.prepare(
+      'SELECT COUNT(*) as c FROM kids_chars WHERE first_seen_at IS NULL'
+    ).get().c;
+
+    // 总复习次数和正确率
+    const reviewStats = this.db.prepare(`
+      SELECT COUNT(*) as total,
+        SUM(CASE WHEN result = 'known' THEN 1 ELSE 0 END) as correct
+      FROM kids_char_reviews
+    `).get();
+    const accuracy = reviewStats.total > 0 ? Math.round(reviewStats.correct / reviewStats.total * 100) : 0;
+
+    // 连续打卡天数
+    const streakDays = this._calculateKidsStreak();
+
+    // 今日学习
+    const today = localDate();
+    const todayReviews = this.db.prepare(
+      'SELECT COUNT(*) as c FROM kids_char_reviews WHERE date(reviewed_at) = @today'
+    ).get({ today }).c;
+    const todaySessions = this.getTodayKidsSessions();
+
+    // 分类统计
+    const categoryStats = this.db.prepare(`
+      SELECT category,
+        COUNT(*) as total,
+        SUM(CASE WHEN is_learned = 1 THEN 1 ELSE 0 END) as learned,
+        SUM(review_count) as reviews,
+        SUM(correct_count) as correct
+      FROM kids_chars
+      GROUP BY category
+      ORDER BY category
+    `).all();
+
+    // 最近7天活动
+    const dailyStats = this.db.prepare(`
+      SELECT date(reviewed_at) as date,
+        COUNT(*) as total,
+        SUM(CASE WHEN result = 'known' THEN 1 ELSE 0 END) as correct,
+        SUM(CASE WHEN result = 'unknown' THEN 1 ELSE 0 END) as wrong
+      FROM kids_char_reviews
+      WHERE reviewed_at >= datetime('now', '-7 days', 'localtime')
+      GROUP BY date(reviewed_at)
+      ORDER BY date ASC
+    `).all();
+
+    // 最近4周周统计
+    const weeklyStats = this.db.prepare(`
+      SELECT strftime('%Y-W%W', reviewed_at) as week,
+        COUNT(*) as total,
+        SUM(CASE WHEN result = 'known' THEN 1 ELSE 0 END) as correct
+      FROM kids_char_reviews
+      WHERE reviewed_at >= datetime('now', '-28 days', 'localtime')
+      GROUP BY week
+      ORDER BY week ASC
+    `).all();
+
+    // 最近6个月月统计
+    const monthlyStats = this.db.prepare(`
+      SELECT strftime('%Y-%m', reviewed_at) as month,
+        COUNT(*) as total,
+        SUM(CASE WHEN result = 'known' THEN 1 ELSE 0 END) as correct
+      FROM kids_char_reviews
+      WHERE reviewed_at >= datetime('now', '-180 days', 'localtime')
+      GROUP BY month
+      ORDER BY month ASC
+    `).all();
+
+    // 每个字的统计
+    const charStats = this.db.prepare(`
+      SELECT id, char, pinyin, category, mastery_level, review_count,
+        correct_count, is_learned, first_seen_at, last_reviewed_at
+      FROM kids_chars
+      WHERE first_seen_at IS NOT NULL
+      ORDER BY last_reviewed_at DESC
+    `).all().map(c => ({
+      ...c,
+      is_learned: !!c.is_learned,
+      error_count: c.review_count - c.correct_count,
+      accuracy: c.review_count > 0 ? Math.round(c.correct_count / c.review_count * 100) : 0
+    }));
+
+    return {
+      total, learned, inProgress, notStarted,
+      totalReviews: reviewStats.total,
+      totalCorrect: reviewStats.correct,
+      accuracy,
+      streakDays,
+      todayReviews,
+      todaySessions: todaySessions.length,
+      categoryStats,
+      dailyStats,
+      weeklyStats,
+      monthlyStats,
+      charStats
+    };
+  }
+
+  _calculateKidsStreak() {
+    const days = this.db.prepare(`
+      SELECT DISTINCT date(reviewed_at) as date
+      FROM kids_char_reviews
+      ORDER BY date DESC
+      LIMIT 60
+    `).all().map(r => r.date);
+
+    if (days.length === 0) return 0;
+
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < days.length; i++) {
+      const expected = new Date(today);
+      expected.setDate(expected.getDate() - i);
+      const pad = n => String(n).padStart(2, '0');
+      const expectedStr = `${expected.getFullYear()}-${pad(expected.getMonth()+1)}-${pad(expected.getDate())}`;
+      if (days[i] === expectedStr) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  getKidsCategories() {
+    return this.db.prepare(
+      'SELECT DISTINCT category FROM kids_chars ORDER BY category'
+    ).all().map(r => r.category);
+  }
+
   close() {
     logger.info('数据库连接已关闭');
     this.db.close();
   }
 }
 
-module.exports = { VocabDB, REVIEW_INTERVALS };
+module.exports = { VocabDB, REVIEW_INTERVALS, KIDS_REVIEW_INTERVALS };
