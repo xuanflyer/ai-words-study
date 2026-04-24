@@ -257,6 +257,23 @@ body {
 .math-option-btn:active { transform: scale(0.95); }
 .math-option-btn.correct { background: var(--kids-green); color: #fff; }
 .math-option-btn.wrong { background: var(--kids-red); color: #fff; }
+.math-next-btn {
+  display: block;
+  margin: 20px auto 0;
+  padding: 14px 40px;
+  border: none;
+  border-radius: 20px;
+  background: var(--kids-blue);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  font-family: var(--kids-font);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.math-next-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+.math-next-btn:active { transform: scale(0.95); }
 
 /* ============ 英语练习区 ============ */
 .english-letter {
@@ -309,6 +326,24 @@ body {
 .english-option-btn:hover { transform: translateY(-2px); }
 .english-option-btn.correct { background: var(--kids-green); color: #fff; }
 .english-option-btn.wrong { background: var(--kids-red); color: #fff; }
+
+.english-next-btn {
+  display: block;
+  margin: 20px auto 0;
+  padding: 14px 40px;
+  border: none;
+  border-radius: 20px;
+  background: var(--kids-blue);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  font-family: var(--kids-font);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.english-next-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+.english-next-btn:active { transform: scale(0.95); }
 
 /* ============ 首页 ============ */
 .kids-hero {

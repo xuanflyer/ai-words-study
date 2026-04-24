@@ -9,25 +9,21 @@ let statsData = null;
 let chartMode = 'daily'; // daily | weekly | monthly
 
 // ===== 语音引擎 =====
+let _speakAudio = null;
 function speak(text, rate = 0.8) {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'zh-CN';
-  u.rate = rate;
-  u.pitch = 1.1;
-  u.volume = 1;
-  // 尝试找中文语音
-  const voices = window.speechSynthesis.getVoices();
-  const zhVoice = voices.find(v => v.lang.startsWith('zh')) || null;
-  if (zhVoice) u.voice = zhVoice;
-  window.speechSynthesis.speak(u);
-}
-
-// 预加载语音
-if ('speechSynthesis' in window) {
-  window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
+  _speakAudio = audio;
+  audio.play().catch(() => {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN'; u.rate = rate; u.pitch = 1.1; u.volume = 1;
+    const voices = window.speechSynthesis.getVoices();
+    const zhVoice = voices.find(v => v.lang.startsWith('zh'));
+    if (zhVoice) u.voice = zhVoice;
+    window.speechSynthesis.speak(u);
+  });
 }
 
 // ===== 学习提示 =====
@@ -217,7 +213,8 @@ function showStudyOverlay() {
 function closeStudyOverlay() {
   const overlay = document.getElementById('studyOverlay');
   if (overlay) overlay.classList.remove('active');
-  window.speechSynthesis.cancel();
+  if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
   loadHome();
 }
 
@@ -627,7 +624,12 @@ function checkMathAnswer(btn, selected, answer) {
   if(correct) { mathState.correct++; speak('太棒了！',1); createStarBurst(); }
   else { speak('再想想！',0.9); document.querySelectorAll('.math-option-btn').forEach(b=>{ if(parseInt(b.textContent)===answer) b.classList.add('correct'); }); }
   saveMathStats(correct);
-  setTimeout(()=>{ mathState.index++; renderMathCard(); }, 1200);
+  document.querySelectorAll('.math-option-btn').forEach(b=>b.onclick=null);
+  const nb = document.createElement('button');
+  nb.className = 'math-next-btn';
+  nb.textContent = '下一题 ➡️';
+  nb.onclick = ()=>{ mathState.index++; renderMathCard(); };
+  document.querySelector('.math-options').after(nb);
 }
 
 function showMathComplete() {
@@ -720,7 +722,12 @@ function checkEngAnswer(btn,sel,ans) {
   if(c) { engState.correct++; speakEn(ans); createStarBurst(); }
   else { document.querySelectorAll('.english-option-btn').forEach(b=>{if(b.textContent===ans)b.classList.add('correct');}); }
   saveEngStats(c);
-  setTimeout(()=>{ engState.index++; renderEnglishCard(); },1200);
+  document.querySelectorAll('.english-option-btn').forEach(b=>b.onclick=null);
+  const nb = document.createElement('button');
+  nb.className = 'english-next-btn';
+  nb.textContent = '下一题 ➡️';
+  nb.onclick = ()=>{ engState.index++; renderEnglishCard(); };
+  document.querySelector('.english-options').after(nb);
 }
 
 function showEnglishComplete() {
@@ -825,7 +832,8 @@ function playCurrent() {
 
 function togglePlay() {
   if (storyState.playing) {
-    window.speechSynthesis.cancel();
+    if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+    window.speechSynthesis && window.speechSynthesis.cancel();
     storyState.playing = false;
     renderStoryReader();
   } else {
@@ -842,19 +850,13 @@ function startAutoPlay() {
 }
 
 function speakParagraph() {
-  const { story, paraIndex, rate, playing } = storyState;
+  const { story, paraIndex, playing } = storyState;
   if (!story || !playing) return;
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(story.paragraphs[paraIndex]);
-  u.lang = 'zh-CN';
-  u.rate = rate;
-  u.pitch = 1.1;
-  u.volume = 1;
-  const voices = window.speechSynthesis.getVoices();
-  const zhVoice = voices.find(v => v.lang.startsWith('zh'));
-  if (zhVoice) u.voice = zhVoice;
-  u.onend = () => {
+  if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
+
+  const text = story.paragraphs[paraIndex];
+  const onDone = () => {
     if (!storyState.playing) return;
     if (storyState.paraIndex < storyState.story.paragraphs.length - 1) {
       storyState.paraIndex++;
@@ -867,13 +869,27 @@ function speakParagraph() {
       showToast('故事讲完啦！🎉');
     }
   };
-  window.speechSynthesis.speak(u);
+
+  const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
+  _speakAudio = audio;
+  audio.onended = onDone;
+  audio.play().catch(() => {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN'; u.rate = storyState.rate; u.pitch = 1.1; u.volume = 1;
+    const voices = window.speechSynthesis.getVoices();
+    const zhVoice = voices.find(v => v.lang.startsWith('zh'));
+    if (zhVoice) u.voice = zhVoice;
+    u.onend = onDone;
+    window.speechSynthesis.speak(u);
+  });
 }
 
 function prevParagraph() {
   if (storyState.paraIndex > 0) {
     storyState.paraIndex--;
-    window.speechSynthesis.cancel();
+    if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+    window.speechSynthesis && window.speechSynthesis.cancel();
     storyState.playing = false;
     renderStoryReader();
     setTimeout(playCurrent, 200);
@@ -883,7 +899,8 @@ function prevParagraph() {
 function nextParagraph() {
   if (storyState.story && storyState.paraIndex < storyState.story.paragraphs.length - 1) {
     storyState.paraIndex++;
-    window.speechSynthesis.cancel();
+    if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+    window.speechSynthesis && window.speechSynthesis.cancel();
     storyState.playing = false;
     renderStoryReader();
     setTimeout(playCurrent, 200);
@@ -893,7 +910,8 @@ function nextParagraph() {
 function setStoryRate(rate) {
   storyState.rate = rate;
   const wasPlaying = storyState.playing;
-  window.speechSynthesis.cancel();
+  if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
   storyState.playing = false;
   renderStoryReader();
   if (wasPlaying) startAutoPlay();
@@ -901,7 +919,8 @@ function setStoryRate(rate) {
 }
 
 function exitStory() {
-  window.speechSynthesis.cancel();
+  if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
   storyState = { story:null, paraIndex:0, playing:false, rate:0.85 };
   switchView('story-home');
 }
