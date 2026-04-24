@@ -13,7 +13,7 @@
     <!-- 顶部导航 -->
     <header class="kids-header">
       <div class="kids-logo" id="kidsLogo" onclick="goHub()">🌈 宝贝乐园</div>
-      <a href="/" class="kids-back-btn">返回首页</a>
+      <a href="/kids" class="kids-back-btn">返回首页</a>
     </header>
 
     <!-- 主内容区 -->
@@ -54,6 +54,16 @@
             <div class="kids-module-info">
               <div class="kids-module-name">英语基础</div>
               <div class="kids-module-desc">ABC字母和简单单词</div>
+            </div>
+            <div class="kids-module-arrow">›</div>
+          </div>
+
+          <!-- 故事模块 -->
+          <div class="kids-module-card module-story" onclick="enterModule('story')">
+            <div class="kids-module-icon">📖</div>
+            <div class="kids-module-info">
+              <div class="kids-module-name">讲故事</div>
+              <div class="kids-module-desc">有趣的故事，边听边学</div>
             </div>
             <div class="kids-module-arrow">›</div>
           </div>
@@ -290,6 +300,23 @@
       <!-- 英语 - 练习 -->
       <section id="view-english-practice" class="kids-view">
         <div class="kids-english-arena" id="englishArena"></div>
+      </section>
+
+      <!-- ===== 故事子模块 ===== -->
+
+      <!-- 故事 - 列表 -->
+      <section id="view-story-home" class="kids-view">
+        <div class="kids-hero">
+          <div class="kids-hero-emoji">📖</div>
+          <h1 class="kids-hero-title">讲故事</h1>
+          <p class="kids-hero-subtitle">精彩故事，边听边看，快乐成长！</p>
+        </div>
+        <div class="kids-story-grid" id="storyGrid"></div>
+      </section>
+
+      <!-- 故事 - 阅读 -->
+      <section id="view-story-read" class="kids-view">
+        <div class="kids-story-reader" id="storyReader"></div>
       </section>
 
     </main>

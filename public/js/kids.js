@@ -61,6 +61,7 @@ function switchView(view) {
   else if (view === 'stats') loadStats();
   else if (view === 'math-home') loadMathHome();
   else if (view === 'english-home') loadEnglishHome();
+  else if (view === 'story-home') loadStoryHome();
 }
 
 function enterModule(mod) {
@@ -69,6 +70,7 @@ function enterModule(mod) {
   if (mod === 'literacy') switchView('home');
   else if (mod === 'math') switchView('math-home');
   else if (mod === 'english') switchView('english-home');
+  else if (mod === 'story') switchView('story-home');
 }
 
 function goHub() {
@@ -95,6 +97,9 @@ function updateTabs(mod) {
     ],
     english: [
       { view:'english-home', icon:'🏠', label:'英语' }
+    ],
+    story: [
+      { view:'story-home', icon:'📖', label:'故事' }
     ]
   };
   const tabs = configs[mod] || [];
@@ -699,10 +704,13 @@ function renderEnglishCard() {
 }
 
 function speakEn(text) {
-  if(!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=0.8;
-  window.speechSynthesis.speak(u);
+  const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`);
+  audio.play().catch(()=>{
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=0.8;
+    window.speechSynthesis.speak(u);
+  });
 }
 
 function checkEngAnswer(btn,sel,ans) {

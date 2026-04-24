@@ -464,6 +464,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
+  padding-top: max(12px, env(safe-area-inset-top));
   background: rgba(0,0,0,0.1);
 }
 
@@ -551,7 +552,7 @@ body {
 }
 
 .kids-char-main {
-  font-size: 160px;
+  font-size: 110px;
   font-weight: 900;
   line-height: 1.1;
   background: linear-gradient(135deg, var(--kids-purple), var(--kids-pink), var(--kids-orange));
@@ -567,7 +568,7 @@ body {
 .kids-char-main:active { transform: scale(0.95); }
 
 @media (min-width: 500px) {
-  .kids-char-main { font-size: 200px; }
+  .kids-char-main { font-size: 150px; }
 }
 
 .kids-char-pinyin {
