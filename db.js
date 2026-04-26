@@ -939,15 +939,17 @@ class VocabDB {
       isNew: false
     }));
 
-    // 选择新字（最多2个，总数不超过5）
+    // 选择新字（最多2个，总数不超过5）— 仅从"当前阶段"抽
+    const currentStage = this.getCurrentKidsStage();
     const newSlots = Math.min(2, 5 - dueChars.length);
     const newChars = newSlots > 0 ? this.db.prepare(`
       SELECT * FROM kids_chars
       WHERE is_learned = 0
         AND first_seen_at IS NULL
-      ORDER BY difficulty ASC, frequency DESC
+        AND difficulty = @stage
+      ORDER BY frequency DESC, id ASC
       LIMIT @limit
-    `).all({ limit: newSlots }).map(c => ({
+    `).all({ limit: newSlots, stage: currentStage }).map(c => ({
       ...c,
       components: JSON.parse(c.components || '[]'),
       images: JSON.parse(c.images || '[]'),
@@ -1133,6 +1135,54 @@ class VocabDB {
     return this.db.prepare(
       'SELECT DISTINCT category FROM kids_chars ORDER BY category'
     ).all().map(r => r.category);
+  }
+
+  // ============ 阶段化（按 difficulty 分阶段） ============
+  // 阶段通关条件：该阶段已学会比例 ≥ 80% 且 该阶段历史正确率 ≥ 80%
+
+  getKidsStageStats() {
+    const rows = this.db.prepare(`
+      SELECT
+        k.difficulty AS stage,
+        COUNT(*) AS total,
+        SUM(CASE WHEN k.is_learned = 1 THEN 1 ELSE 0 END) AS learned,
+        SUM(CASE WHEN k.first_seen_at IS NOT NULL THEN 1 ELSE 0 END) AS seen,
+        COALESCE(SUM(k.review_count), 0) AS reviews,
+        COALESCE(SUM(k.correct_count), 0) AS correct
+      FROM kids_chars k
+      GROUP BY k.difficulty
+      ORDER BY k.difficulty ASC
+    `).all();
+
+    const LEARN_RATIO = 0.8;
+    const ACC_RATIO = 0.8;
+
+    return rows.map(r => {
+      const learnRatio = r.total > 0 ? r.learned / r.total : 0;
+      const accuracy = r.reviews > 0 ? r.correct / r.reviews : 0;
+      const passed = learnRatio >= LEARN_RATIO && accuracy >= ACC_RATIO;
+      return {
+        stage: r.stage,
+        total: r.total,
+        learned: r.learned,
+        seen: r.seen,
+        reviews: r.reviews,
+        correct: r.correct,
+        learnRatio: Math.round(learnRatio * 100),
+        accuracy: r.reviews > 0 ? Math.round(accuracy * 100) : 0,
+        passed,
+        learnThreshold: Math.round(LEARN_RATIO * 100),
+        accThreshold: Math.round(ACC_RATIO * 100)
+      };
+    });
+  }
+
+  // 当前应解锁/学习的阶段：第一个未通关阶段；全部通关返回最高阶段
+  getCurrentKidsStage() {
+    const stages = this.getKidsStageStats();
+    if (stages.length === 0) return 1;
+    const next = stages.find(s => !s.passed);
+    return next ? next.stage : stages[stages.length - 1].stage;
   }
 
   // ============ 故事播放记录 ============

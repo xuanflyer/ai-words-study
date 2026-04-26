@@ -1406,6 +1406,127 @@ body {
   background: rgba(255,255,255,0.25);
 }
 
+/* ============ 阶段化（阶段进度卡 + 锁定按钮） ============ */
+.kids-stage-card {
+  background: var(--kids-card-bg);
+  border-radius: var(--kids-radius);
+  margin: 16px 0;
+  padding: 18px 20px;
+  box-shadow: var(--kids-card-shadow);
+}
+.kids-stage-card:empty { display: none; }
+
+.kids-stage-head {
+  margin-bottom: 14px;
+}
+.kids-stage-headline {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--kids-text);
+}
+.kids-stage-tip {
+  font-size: 12px;
+  color: var(--kids-text-light);
+  margin-top: 4px;
+}
+
+.kids-stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kids-stage-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 2px solid transparent;
+  align-items: center;
+}
+.kids-stage-item.passed {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.kids-stage-item.current {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  box-shadow: 0 4px 14px rgba(59,130,246,0.12);
+}
+.kids-stage-item.locked {
+  background: #f1f5f9;
+  opacity: 0.7;
+}
+
+.kids-stage-icon {
+  font-size: 26px;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.kids-stage-body { flex: 1; min-width: 0; }
+.kids-stage-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--kids-text);
+}
+.kids-stage-sub {
+  font-size: 12px;
+  color: var(--kids-text-light);
+  margin-top: 2px;
+}
+.kids-stage-bar {
+  margin-top: 8px;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.kids-stage-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--kids-purple), var(--kids-blue));
+  border-radius: 3px;
+  transition: width 0.4s;
+}
+.kids-stage-item.passed .kids-stage-bar-fill {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+.kids-stage-item.locked .kids-stage-bar-fill {
+  background: #cbd5e1;
+}
+
+/* 锁定的难度按钮 */
+.kids-difficulty-btn.locked {
+  position: relative;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: var(--kids-text-light);
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+  opacity: 0.7;
+}
+.kids-difficulty-btn.locked:hover {
+  transform: none;
+  border-color: #e2e8f0;
+  box-shadow: none;
+}
+.kids-difficulty-btn.locked .kids-difficulty-emoji {
+  filter: grayscale(0.8);
+  opacity: 0.6;
+}
+.kids-difficulty-btn.locked .kids-difficulty-name {
+  color: var(--kids-text-light);
+}
+.kids-difficulty-btn.locked .kids-difficulty-desc {
+  color: #94a3b8;
+}
+.kids-difficulty-lock {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 16px;
+}
+
 /* ============ 响应式 ============ */
 @media (max-width: 400px) {
   .kids-char-grid { grid-template-columns: repeat(3, 1fr); }

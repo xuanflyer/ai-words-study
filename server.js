@@ -313,6 +313,13 @@ app.get('/api/kids/categories', (req, res) => {
   res.json({ categories });
 });
 
+// 阶段进度
+app.get('/api/kids/stages', (req, res) => {
+  const stages = db.getKidsStageStats();
+  const currentStage = db.getCurrentKidsStage();
+  res.json({ stages, currentStage });
+});
+
 // 故事列表
 const storiesData = require('./data/kids_stories.json');
 app.get('/api/kids/stories', (req, res) => {

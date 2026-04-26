@@ -181,6 +181,130 @@ function renderAssessment(elId, evalResult) {
   `;
 }
 
+// ===== 阶段化（识字 / 算数 / 英语共用 UI 渲染） =====
+
+function renderLiteracyStages(data) {
+  const el = document.getElementById('literacyStageCard');
+  if (!el || !data || !data.stages) return;
+  const stages = data.stages;
+  const cur = data.currentStage;
+  const total = stages.length;
+  const passedCount = stages.filter(s => s.passed).length;
+  const allPassed = passedCount === total;
+
+  const items = stages.map(s => {
+    const isCurrent = s.stage === cur && !allPassed;
+    const cls = s.passed ? 'passed' : (isCurrent ? 'current' : 'locked');
+    const icon = s.passed ? '✅' : (isCurrent ? '📘' : '🔒');
+    const learnPct = s.total > 0 ? Math.round(s.learned / s.total * 100) : 0;
+    const subline = s.passed
+      ? `已通关 · ${s.learned}/${s.total} 字 · 正确率 ${s.accuracy}%`
+      : isCurrent
+        ? `进行中 · ${s.learned}/${s.total} 字（${s.learnRatio}%） · 正确率 ${s.accuracy}%`
+        : `🔒 待解锁 · 共 ${s.total} 字`;
+    return `
+      <div class="kids-stage-item ${cls}">
+        <div class="kids-stage-icon">${icon}</div>
+        <div class="kids-stage-body">
+          <div class="kids-stage-title">第 ${s.stage} 阶段</div>
+          <div class="kids-stage-sub">${subline}</div>
+          <div class="kids-stage-bar"><div class="kids-stage-bar-fill" style="width:${learnPct}%"></div></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const headline = allPassed
+    ? '🏆 全部阶段通关！太厉害啦！'
+    : `📘 当前在 第 ${cur} 阶段（共 ${total} 阶段）`;
+  const tip = allPassed
+    ? '继续巩固已学的字吧！'
+    : `通关条件：该阶段已学会 ≥ ${stages[0].learnThreshold}% 且 正确率 ≥ ${stages[0].accThreshold}%`;
+
+  el.innerHTML = `
+    <div class="kids-stage-head">
+      <div class="kids-stage-headline">${headline}</div>
+      <div class="kids-stage-tip">${tip}</div>
+    </div>
+    <div class="kids-stage-list">${items}</div>
+  `;
+}
+
+// 通用阶段渲染（算数 / 英语）
+// stages: [{ key, label, emoji, desc, total, correct, threshold }]
+function renderLinearStages(cardId, gridId, stages, onClick) {
+  // 计算解锁状态：第 0 个永远解锁；第 N 个需要前序全部通关
+  const enriched = stages.map(s => {
+    const acc = s.total > 0 ? Math.round(s.correct / s.total * 100) : 0;
+    const passed = s.total >= s.threshold && acc >= 80;
+    return { ...s, accuracy: acc, passed };
+  });
+  let unlockedUntil = 0;
+  for (let i = 0; i < enriched.length; i++) {
+    enriched[i].unlocked = i <= unlockedUntil;
+    if (enriched[i].passed && i === unlockedUntil) unlockedUntil = i + 1;
+  }
+  const currentIdx = enriched.findIndex(s => !s.passed);
+  const allPassed = currentIdx === -1;
+
+  // 阶段进度卡
+  const card = document.getElementById(cardId);
+  if (card) {
+    const headline = allPassed
+      ? '🏆 全部阶段通关！'
+      : `📘 当前在「${enriched[currentIdx].label}」（${currentIdx + 1}/${enriched.length}）`;
+    const items = enriched.map((s, i) => {
+      const cls = s.passed ? 'passed' : (i === currentIdx ? 'current' : 'locked');
+      const icon = s.passed ? '✅' : (i === currentIdx ? '📘' : '🔒');
+      const pct = s.total >= s.threshold ? 100 : Math.min(100, Math.round(s.total / s.threshold * 100));
+      const subline = s.passed
+        ? `已通关 · ${s.correct}/${s.total} 题 · 正确率 ${s.accuracy}%`
+        : i === currentIdx
+          ? `进行中 · ${s.correct}/${s.total} 题（需 ${s.threshold} 题以上） · 正确率 ${s.accuracy}%`
+          : `🔒 待解锁 · 完成上一阶段后开启`;
+      return `
+        <div class="kids-stage-item ${cls}">
+          <div class="kids-stage-icon">${icon}</div>
+          <div class="kids-stage-body">
+            <div class="kids-stage-title">${s.emoji} ${s.label}</div>
+            <div class="kids-stage-sub">${subline}</div>
+            <div class="kids-stage-bar"><div class="kids-stage-bar-fill" style="width:${pct}%"></div></div>
+          </div>
+        </div>`;
+    }).join('');
+    card.innerHTML = `
+      <div class="kids-stage-head">
+        <div class="kids-stage-headline">${headline}</div>
+        <div class="kids-stage-tip">通关条件：题数 ≥ 阶段阈值 且 正确率 ≥ 80%</div>
+      </div>
+      <div class="kids-stage-list">${items}</div>
+    `;
+  }
+
+  // 难度按钮
+  const grid = document.getElementById(gridId);
+  if (grid) {
+    grid.innerHTML = enriched.map((s, i) => {
+      const cls = s.unlocked ? '' : ' locked';
+      const lockBadge = s.unlocked ? '' : '<span class="kids-difficulty-lock">🔒</span>';
+      const subDesc = s.unlocked
+        ? s.desc
+        : `🔒 通关上一关解锁`;
+      return `
+        <button class="kids-difficulty-btn${cls}" data-key="${s.key}" data-unlocked="${s.unlocked ? '1' : '0'}" ${s.unlocked ? '' : 'disabled'}>
+          ${lockBadge}
+          <span class="kids-difficulty-emoji">${s.emoji}</span>
+          <span class="kids-difficulty-name">${s.label}</span>
+          <span class="kids-difficulty-desc">${subDesc}</span>
+        </button>`;
+    }).join('');
+    grid.querySelectorAll('.kids-difficulty-btn').forEach(btn => {
+      const unlocked = btn.getAttribute('data-unlocked') === '1';
+      const key = btn.getAttribute('data-key');
+      btn.onclick = unlocked ? () => onClick(key) : () => showToast('🔒 先通关上一阶段再来挑战！');
+    });
+  }
+}
+
 // ===== 视图切换 =====
 function switchView(view) {
   currentView = view;
@@ -254,9 +378,10 @@ async function loadHub() {
 // ===== 首页 =====
 async function loadHome() {
   try {
-    const [statsRes, sessionsRes] = await Promise.all([
+    const [statsRes, sessionsRes, stagesRes] = await Promise.all([
       fetch('/api/kids/stats').then(r => r.json()),
-      fetch('/api/kids/sessions/today').then(r => r.json())
+      fetch('/api/kids/sessions/today').then(r => r.json()),
+      fetch('/api/kids/stages').then(r => r.json())
     ]);
 
     const stats = statsRes;
@@ -276,6 +401,7 @@ async function loadHome() {
     setNum('homeAccuracy', stats.accuracy ? stats.accuracy + '%' : '0%');
     setNum('homeTodayReviews', stats.todayReviews || 0);
 
+    renderLiteracyStages(stagesRes);
     renderAssessment('literacyAssessment', evalLiteracy(stats));
 
     // 开始学习按钮状态
@@ -753,13 +879,29 @@ function getMathTotals() {
   return { total, correct };
 }
 
+// 算数阶段定义：阶段顺序 + 解锁阈值（题数）。正确率统一 80%。
+const MATH_STAGES = [
+  { key: 'easy',   label: '简单', emoji: '🌟', desc: '10以内加减',  threshold: 20 },
+  { key: 'medium', label: '中等', emoji: '⭐', desc: '20以内加减',  threshold: 30 },
+  { key: 'hard',   label: '挑战', emoji: '🌠', desc: '100以内加减', threshold: 30 }
+];
+
 function loadMathHome() {
   const t = getMathTotals();
   const set = (id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
   set('mathTotal', t.total);
   set('mathCorrect', t.correct);
   set('mathAccuracy', t.total>0 ? Math.round(t.correct/t.total*100)+'%' : '0%');
-  renderAssessment('mathAssessment', evalMath(getMathStats()));
+
+  const ms = getMathStats();
+  const stages = MATH_STAGES.map(s => ({
+    ...s,
+    total: (ms[s.key] && ms[s.key].total) || 0,
+    correct: (ms[s.key] && ms[s.key].correct) || 0
+  }));
+  renderLinearStages('mathStageCard', 'mathDifficultyGrid', stages, startMathGame);
+
+  renderAssessment('mathAssessment', evalMath(ms));
 }
 
 function generateMathQ(diff) {
@@ -873,13 +1015,29 @@ function getEngTotals() {
   return { total, correct };
 }
 
+// 英语阶段定义
+const ENG_STAGES = [
+  { key: 'alphabet', label: '字母', emoji: '🅰️', desc: '26个英文字母',  threshold: 26 },
+  { key: 'words',    label: '单词', emoji: '🍎', desc: '日常简单单词',  threshold: 30 },
+  { key: 'colors',   label: '颜色', emoji: '🎨', desc: '认识各种颜色',  threshold: 20 }
+];
+
 function loadEnglishHome() {
   const t = getEngTotals();
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   set('engTotal', t.total);
   set('engCorrect', t.correct);
   set('engAccuracy', t.total>0?Math.round(t.correct/t.total*100)+'%':'0%');
-  renderAssessment('englishAssessment', evalEnglish(getEngStats()));
+
+  const es = getEngStats();
+  const stages = ENG_STAGES.map(s => ({
+    ...s,
+    total: (es[s.key] && es[s.key].total) || 0,
+    correct: (es[s.key] && es[s.key].correct) || 0
+  }));
+  renderLinearStages('englishStageCard', 'englishDifficultyGrid', stages, startEnglishGame);
+
+  renderAssessment('englishAssessment', evalEnglish(es));
 }
 
 function startEnglishGame(mode) {
