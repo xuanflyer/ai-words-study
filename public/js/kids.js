@@ -5,25 +5,45 @@ let currentModule = null; // null=hub, 'literacy', 'math', 'english'
 let currentView = 'hub';
 let studySession = null;
 let studyIndex = 0;
+let studyReviewed = {}; // { [index]: true | false } — choice already submitted to API
 let statsData = null;
 let chartMode = 'daily'; // daily | weekly | monthly
 
 // ===== 语音引擎 =====
 let _speakAudio = null;
+let _speakToken = 0;
 function speak(text, rate = 0.8) {
-  if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+  if (!text) return;
+  const myToken = ++_speakToken;
+
+  if (_speakAudio) { try { _speakAudio.pause(); _speakAudio.src = ''; } catch (_) {} _speakAudio = null; }
   window.speechSynthesis && window.speechSynthesis.cancel();
-  const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
-  _speakAudio = audio;
-  audio.play().catch(() => {
+
+  const fallback = () => {
+    if (myToken !== _speakToken) return;
     if (!('speechSynthesis' in window)) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'zh-CN'; u.rate = rate; u.pitch = 1.1; u.volume = 1;
-    const voices = window.speechSynthesis.getVoices();
-    const zhVoice = voices.find(v => v.lang.startsWith('zh'));
-    if (zhVoice) u.voice = zhVoice;
-    window.speechSynthesis.speak(u);
-  });
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN'; u.rate = rate; u.pitch = 1.1; u.volume = 1;
+      const voices = window.speechSynthesis.getVoices();
+      const zhVoice = voices.find(v => v.lang.startsWith('zh'));
+      if (zhVoice) u.voice = zhVoice;
+      window.speechSynthesis.speak(u);
+    } catch (_) {}
+  };
+
+  let fired = false;
+  const fireFallback = () => { if (!fired) { fired = true; fallback(); } };
+
+  try {
+    const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
+    _speakAudio = audio;
+    audio.addEventListener('error', fireFallback);
+    const p = audio.play();
+    if (p && typeof p.catch === 'function') p.catch(fireFallback);
+  } catch (_) {
+    fireFallback();
+  }
 }
 
 // ===== 学习提示 =====
@@ -196,6 +216,7 @@ async function startStudy(force = false) {
 
     studySession = data.session;
     studyIndex = 0;
+    studyReviewed = {};
     showStudyOverlay();
     renderStudyCard();
   } catch (e) {
@@ -218,7 +239,7 @@ function closeStudyOverlay() {
   loadHome();
 }
 
-function renderStudyCard() {
+function renderStudyCard(opts) {
   if (!studySession) return;
   const chars = studySession.chars;
 
@@ -230,6 +251,7 @@ function renderStudyCard() {
 
   const char = chars[studyIndex];
   const total = chars.length;
+  const skipAutoSpeak = opts && opts.skipAutoSpeak;
 
   // 更新进度
   const progText = document.getElementById('studyProgressText');
@@ -243,6 +265,12 @@ function renderStudyCard() {
 
   const images = char.images || [];
   const components = char.components || [];
+  const reviewed = studyReviewed[studyIndex];
+  const isFirst = studyIndex === 0;
+  const isLast = studyIndex === total - 1;
+  const reviewLocked = reviewed !== undefined ? 'disabled' : '';
+  const knownSelected = reviewed === true ? ' selected' : '';
+  const unknownSelected = reviewed === false ? ' selected' : '';
 
   content.innerHTML = `
     <div class="kids-study-hint">${getRandomHint()}</div>
@@ -269,22 +297,31 @@ function renderStudyCard() {
       `).join('')}
     </div>
     <div class="kids-review-btns">
-      <button class="kids-review-btn unknown" onclick="reviewChar(false)">
+      <button class="kids-review-btn unknown${unknownSelected}" ${reviewLocked} onclick="reviewChar(false)">
         不认识 ✗
       </button>
-      <button class="kids-review-btn known" onclick="reviewChar(true)">
+      <button class="kids-review-btn known${knownSelected}" ${reviewLocked} onclick="reviewChar(true)">
         认识 ✓
       </button>
     </div>
+    <div class="kids-nav-btns">
+      <button class="kids-nav-btn" ${isFirst ? 'disabled' : ''} onclick="prevChar()">⬅ 上一个</button>
+      <button class="kids-nav-btn next" onclick="nextChar()">${isLast ? '完成 🎉' : '下一个 ➡'}</button>
+    </div>
   `;
 
-  // 自动读字（延迟0.5秒）
-  setTimeout(() => speak(char.char), 500);
+  // 自动读字（延迟0.5秒）— 复习反馈时跳过，避免打断"太棒了"语音
+  if (!skipAutoSpeak) {
+    setTimeout(() => speak(char.char), 500);
+  }
 }
 
 // ===== 复习操作 =====
 async function reviewChar(known) {
   if (!studySession) return;
+  if (studyReviewed[studyIndex] !== undefined) return; // 已选择过
+
+  studyReviewed[studyIndex] = known;
   const char = studySession.chars[studyIndex];
 
   try {
@@ -293,23 +330,31 @@ async function reviewChar(known) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ known })
     });
-
-    // 语音反馈
-    if (known) {
-      speak('太棒了！', 1.0);
-      createStarBurst();
-    } else {
-      speak('没关系，我们再学一遍！', 0.9);
-    }
-
-    // 延迟后进入下一个
-    setTimeout(() => {
-      studyIndex++;
-      renderStudyCard();
-    }, known ? 1200 : 1500);
   } catch (e) {
     console.error('复习失败:', e);
   }
+
+  if (known) {
+    speak('太棒了！', 1.0);
+    createStarBurst();
+  } else {
+    speak('没关系，我们再学一遍！', 0.9);
+  }
+
+  // 停在当前卡片，仅刷新按钮选中态；不自动朗读字以免打断反馈语音
+  renderStudyCard({ skipAutoSpeak: true });
+}
+
+function prevChar() {
+  if (studyIndex > 0) {
+    studyIndex--;
+    renderStudyCard();
+  }
+}
+
+function nextChar() {
+  studyIndex++;
+  renderStudyCard();
 }
 
 // ===== 完成页面 =====

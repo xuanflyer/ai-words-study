@@ -743,6 +743,44 @@ body {
 .kids-review-btn:hover { transform: translateY(-3px); }
 .kids-review-btn:active { transform: translateY(0) scale(0.97); }
 
+.kids-review-btn:disabled { cursor: default; opacity: 0.55; }
+.kids-review-btn:disabled:hover { transform: none; }
+.kids-review-btn.selected { opacity: 1; outline: 4px solid rgba(255,255,255,0.9); outline-offset: -4px; transform: scale(0.97); }
+
+/* 上一个 / 下一个 导航按钮 */
+.kids-nav-btns {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  padding-bottom: 24px;
+}
+
+.kids-nav-btn {
+  flex: 1;
+  padding: 14px;
+  border: 2px solid var(--kids-border, #e5e7eb);
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  background: #fff;
+  color: var(--kids-text, #1f2937);
+  font-family: var(--kids-font);
+  transition: all 0.2s;
+}
+
+.kids-nav-btn.next {
+  background: linear-gradient(135deg, var(--kids-blue), var(--kids-purple));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(99,102,241,0.35);
+}
+
+.kids-nav-btn:hover:not(:disabled) { transform: translateY(-2px); }
+.kids-nav-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+.kids-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* 完成页面 */
 .kids-complete {
   text-align: center;
