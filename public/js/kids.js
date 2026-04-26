@@ -740,12 +740,16 @@ function renderEnglishCard() {
   const opts = new Set([q.answer]);
   while(opts.size<4) { const r=allAnswers[Math.floor(Math.random()*allAnswers.length)]; if(r!==q.answer) opts.add(r); }
   const shuffled = [...opts].sort(()=>Math.random()-0.5);
-  const speakEn = mode==='alphabet' ? q.display : q.answer;
+  const speakText = mode==='alphabet' ? q.display : q.answer;
+  const wordBtn = mode==='alphabet'
+    ? `<button class="english-word-btn" onclick="event.stopPropagation();speakEn('${q.answer}')">🔊 ${q.answer}</button>`
+    : '';
   document.getElementById('englishContent').innerHTML = `
     <div class="kids-study-hint">选出正确答案！🤔</div>
-    <div class="english-word-card" onclick="speakEn('${speakEn}')">
+    <div class="english-word-card" onclick="speakEn('${speakText}')">
       <div class="english-word-emoji">${q.emoji}</div>
       <div class="english-word-text">${q.question}</div>
+      ${wordBtn}
     </div>
     <div class="english-options">${shuffled.map(o=>`<button class="english-option-btn" onclick="checkEngAnswer(this,'${o}','${q.answer}')">${o}</button>`).join('')}</div>`;
 }

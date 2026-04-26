@@ -302,6 +302,23 @@ body {
 .english-word-text { font-size: 36px; font-weight: 900; color: var(--kids-text); margin: 8px 0 4px; }
 .english-word-phonetic { font-size: 18px; color: var(--kids-blue); font-weight: 600; }
 
+.english-word-btn {
+  margin-top: 12px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 16px;
+  background: var(--kids-blue);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--kids-font);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.english-word-btn:hover { transform: translateY(-2px); }
+.english-word-btn:active { transform: scale(0.95); }
+
 .english-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
