@@ -1323,6 +1323,89 @@ body {
   to { opacity: 0; transform: translateY(-20px); }
 }
 
+/* ============ 能力评估卡片 ============ */
+.kids-assessment-card {
+  background: var(--kids-card-bg);
+  border-radius: var(--kids-radius);
+  margin: 16px 0;
+  box-shadow: var(--kids-card-shadow);
+  overflow: hidden;
+}
+.kids-assessment-card:empty { display: none; }
+
+.kids-assessment-header {
+  padding: 20px 24px;
+  color: #fff;
+  text-align: center;
+}
+.kids-assessment-label {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.85;
+  letter-spacing: 1px;
+}
+.kids-assessment-grade {
+  font-size: 22px;
+  font-weight: 900;
+  margin-top: 6px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.kids-assessment-stars {
+  font-size: 20px;
+  margin-top: 8px;
+  letter-spacing: 2px;
+}
+.kids-assessment-stats {
+  font-size: 13px;
+  opacity: 0.95;
+  margin-top: 6px;
+}
+
+.kids-assessment-tips {
+  padding: 16px 24px 20px;
+}
+.kids-assessment-tips-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--kids-text);
+  margin-bottom: 8px;
+}
+.kids-assessment-tips-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.kids-assessment-tips-list li {
+  font-size: 14px;
+  color: var(--kids-text);
+  line-height: 1.6;
+  padding: 6px 0 6px 22px;
+  position: relative;
+}
+.kids-assessment-tips-list li::before {
+  content: '•';
+  position: absolute;
+  left: 8px;
+  color: var(--kids-purple);
+  font-weight: 900;
+}
+
+/* ============ 故事讲读次数 ============ */
+.kids-story-count {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.25);
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+.kids-story-count-new {
+  background: rgba(255,255,255,0.25);
+}
+
 /* ============ 响应式 ============ */
 @media (max-width: 400px) {
   .kids-char-grid { grid-template-columns: repeat(3, 1fr); }

@@ -60,6 +60,127 @@ function getRandomHint() {
   return STUDY_HINTS[Math.floor(Math.random() * STUDY_HINTS.length)];
 }
 
+// ===== 能力评估 =====
+// 识字：基于已学会字数（参考小学语文课标识字量）和正确率
+function evalLiteracy(stats) {
+  const learned = stats.learned || 0;
+  const acc = stats.accuracy || 0;
+  const reviews = stats.totalReviews || 0;
+  let level, grade, color;
+  if (learned >= 2500) { level = 5; grade = '小学高年级（5-6年级）'; color = '#8b5cf6'; }
+  else if (learned >= 1600) { level = 4; grade = '小学三年级'; color = '#3b82f6'; }
+  else if (learned >= 600)  { level = 3; grade = '小学一二年级'; color = '#22c55e'; }
+  else if (learned >= 200)  { level = 2; grade = '幼小衔接（学前班）'; color = '#f59e0b'; }
+  else if (learned >= 50)   { level = 1; grade = '学前启蒙'; color = '#f97316'; }
+  else { level = 0; grade = '识字萌芽期'; color = '#ec4899'; }
+
+  const tips = [];
+  if (acc < 70 && reviews >= 20) tips.push(`正确率偏低（${acc}%），慢一点，多复习巩固`);
+  if (learned < 50) {
+    tips.push('每天学 3-5 个新字，养成每天打卡的好习惯');
+    tips.push('多看图、多讲故事，把汉字和画面联系起来');
+  } else if (learned < 200) {
+    tips.push('保持每天的学习节奏，累积突破 300 字');
+    tips.push('开始尝试用学过的字组词');
+  } else if (learned < 600) {
+    tips.push('可以读简单绘本（带拼音），把字用起来');
+    tips.push('注意常见偏旁部首，归类记忆');
+  } else if (learned < 1600) {
+    tips.push('选分级阅读读物，提升阅读量');
+    tips.push('练习写日记或小短文');
+  } else if (learned < 2500) {
+    tips.push('阅读经典童话与科普读物，积累词汇');
+    tips.push('练习写作，让汉字"活"起来');
+  } else {
+    tips.push('开始阅读完整章节书与诗词');
+    tips.push('巩固难字易错字，挑战写作表达');
+  }
+  return { level, grade, color, learned, acc, tips, statsLine: `已学会 ${learned} 字 · 正确率 ${acc}%` };
+}
+
+// 算数：按难度分别评估
+function evalMath(stats) {
+  const e = stats.easy || {total:0,correct:0};
+  const m = stats.medium || {total:0,correct:0};
+  const h = stats.hard || {total:0,correct:0};
+  const accOf = (s) => s.total > 0 ? Math.round(s.correct/s.total*100) : 0;
+  const ae = accOf(e), am = accOf(m), ah = accOf(h);
+
+  let level, grade, color;
+  if (h.total >= 30 && ah >= 80) { level = 4; grade = '小学二年级（100以内加减）'; color = '#3b82f6'; }
+  else if (m.total >= 30 && am >= 80) { level = 3; grade = '小学一年级（20以内加减）'; color = '#22c55e'; }
+  else if (e.total >= 20 && ae >= 80) { level = 2; grade = '学前/幼儿园（10以内加减）'; color = '#f59e0b'; }
+  else if (e.total >= 5)              { level = 1; grade = '启蒙阶段'; color = '#f97316'; }
+  else                                { level = 0; grade = '准备阶段'; color = '#ec4899'; }
+
+  const tips = [];
+  if (e.total < 20) tips.push('从"简单"难度开始，先把 10 以内加减练熟');
+  else if (ae < 80) tips.push(`简单题正确率 ${ae}%，再练几轮巩固熟练度`);
+  else if (m.total < 20) tips.push('挑战"中等"难度，进入 20 以内加减带进退位');
+  else if (am < 80) tips.push(`中等题正确率 ${am}%，重点练进位/退位`);
+  else if (h.total < 20) tips.push('开始"挑战"难度，攻克 100 以内加减');
+  else if (ah < 80) tips.push(`挑战题正确率 ${ah}%，借助数线/凑十法解题`);
+  else {
+    tips.push('准备进入乘法表和简单除法');
+    tips.push('多用生活中的数字（购物、时间）解决问题');
+  }
+  const statsLine = `简单 ${e.correct}/${e.total} · 中等 ${m.correct}/${m.total} · 挑战 ${h.correct}/${h.total}`;
+  return { level, grade, color, tips, statsLine };
+}
+
+// 英语：按学习内容（字母/单词/颜色）分别评估
+function evalEnglish(stats) {
+  const a = stats.alphabet || {total:0,correct:0};
+  const w = stats.words || {total:0,correct:0};
+  const c = stats.colors || {total:0,correct:0};
+  const accOf = (s) => s.total > 0 ? Math.round(s.correct/s.total*100) : 0;
+  const aa = accOf(a), aw = accOf(w), ac = accOf(c);
+
+  let level, grade, color;
+  if (w.total >= 30 && aw >= 80 && c.total >= 20 && ac >= 80) { level = 3; grade = '小学三年级英语水平'; color = '#3b82f6'; }
+  else if (a.total >= 26 && aa >= 80 && (w.total >= 10 || c.total >= 10)) { level = 2; grade = '幼小衔接英语'; color = '#22c55e'; }
+  else if (a.total >= 10) { level = 1; grade = '字母启蒙阶段'; color = '#f59e0b'; }
+  else { level = 0; grade = '英语萌芽期'; color = '#ec4899'; }
+
+  const tips = [];
+  if (a.total < 26) tips.push('先从字母开始，认识 26 个英文字母');
+  else if (aa < 80) tips.push(`字母正确率 ${aa}%，复习字母名与发音`);
+  else if (w.total < 20) tips.push('学习日常单词（动物、食物、物品）');
+  else if (aw < 80) tips.push(`单词正确率 ${aw}%，看图记忆更牢固`);
+  else if (c.total < 10) tips.push('练习颜色单词');
+  else {
+    tips.push('开始学简单短句和英文儿歌');
+    tips.push('每天听 5 分钟英文儿歌，培养语感');
+  }
+  const statsLine = `字母 ${a.correct}/${a.total} · 单词 ${w.correct}/${w.total} · 颜色 ${c.correct}/${c.total}`;
+  return { level, grade, color, tips, statsLine };
+}
+
+function starsForLevel(level) {
+  const filled = Math.max(0, Math.min(5, level));
+  return '⭐'.repeat(filled) + '☆'.repeat(5 - filled);
+}
+
+function renderAssessment(elId, evalResult) {
+  const el = document.getElementById(elId);
+  if (!el || !evalResult) return;
+  const { level, grade, color, statsLine, tips } = evalResult;
+  el.innerHTML = `
+    <div class="kids-assessment-header" style="background:linear-gradient(135deg, ${color}, ${color}cc)">
+      <div class="kids-assessment-label">📈 当前水平</div>
+      <div class="kids-assessment-grade">${grade}</div>
+      <div class="kids-assessment-stars">${starsForLevel(level)}</div>
+      <div class="kids-assessment-stats">${statsLine}</div>
+    </div>
+    <div class="kids-assessment-tips">
+      <div class="kids-assessment-tips-title">💡 学习建议</div>
+      <ul class="kids-assessment-tips-list">
+        ${tips.map(t => `<li>${t}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
 // ===== 视图切换 =====
 function switchView(view) {
   currentView = view;
@@ -154,6 +275,8 @@ async function loadHome() {
     setNum('homeTotal', stats.total || 0);
     setNum('homeAccuracy', stats.accuracy ? stats.accuracy + '%' : '0%');
     setNum('homeTodayReviews', stats.todayReviews || 0);
+
+    renderAssessment('literacyAssessment', evalLiteracy(stats));
 
     // 开始学习按钮状态
     const btn = document.getElementById('startStudyBtn');
@@ -605,20 +728,38 @@ document.addEventListener('DOMContentLoaded', () => {
 let mathState = { questions:[], index:0, correct:0, difficulty:'easy' };
 
 function getMathStats() {
-  return JSON.parse(localStorage.getItem('kids_math_stats') || '{"total":0,"correct":0}');
+  const raw = JSON.parse(localStorage.getItem('kids_math_stats') || '{}');
+  // 兼容旧格式 {total, correct} -> 全部归入 easy
+  if (raw.total !== undefined && raw.easy === undefined) {
+    return { easy: {total: raw.total||0, correct: raw.correct||0}, medium:{total:0,correct:0}, hard:{total:0,correct:0} };
+  }
+  return {
+    easy: raw.easy || {total:0,correct:0},
+    medium: raw.medium || {total:0,correct:0},
+    hard: raw.hard || {total:0,correct:0}
+  };
 }
-function saveMathStats(correct) {
+function saveMathStats(diff, correct) {
   const s = getMathStats();
-  s.total++; if(correct) s.correct++;
+  if (!s[diff]) s[diff] = {total:0, correct:0};
+  s[diff].total++;
+  if (correct) s[diff].correct++;
   localStorage.setItem('kids_math_stats', JSON.stringify(s));
+}
+function getMathTotals() {
+  const s = getMathStats();
+  const total = s.easy.total + s.medium.total + s.hard.total;
+  const correct = s.easy.correct + s.medium.correct + s.hard.correct;
+  return { total, correct };
 }
 
 function loadMathHome() {
-  const s = getMathStats();
+  const t = getMathTotals();
   const set = (id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  set('mathTotal', s.total);
-  set('mathCorrect', s.correct);
-  set('mathAccuracy', s.total>0 ? Math.round(s.correct/s.total*100)+'%' : '0%');
+  set('mathTotal', t.total);
+  set('mathCorrect', t.correct);
+  set('mathAccuracy', t.total>0 ? Math.round(t.correct/t.total*100)+'%' : '0%');
+  renderAssessment('mathAssessment', evalMath(getMathStats()));
 }
 
 function generateMathQ(diff) {
@@ -668,7 +809,7 @@ function checkMathAnswer(btn, selected, answer) {
   btn.classList.add(correct?'correct':'wrong');
   if(correct) { mathState.correct++; speak('太棒了！',1); createStarBurst(); }
   else { speak('再想想！',0.9); document.querySelectorAll('.math-option-btn').forEach(b=>{ if(parseInt(b.textContent)===answer) b.classList.add('correct'); }); }
-  saveMathStats(correct);
+  saveMathStats(mathState.difficulty, correct);
   document.querySelectorAll('.math-option-btn').forEach(b=>b.onclick=null);
   const nb = document.createElement('button');
   nb.className = 'math-next-btn';
@@ -707,14 +848,38 @@ const ENG_DATA = {
 };
 let engState = { items:[], index:0, correct:0, mode:'words' };
 
-function getEngStats() { return JSON.parse(localStorage.getItem('kids_eng_stats')||'{"total":0,"correct":0}'); }
-function saveEngStats(c) { const s=getEngStats(); s.total++; if(c) s.correct++; localStorage.setItem('kids_eng_stats',JSON.stringify(s)); }
+function getEngStats() {
+  const raw = JSON.parse(localStorage.getItem('kids_eng_stats')||'{}');
+  if (raw.total !== undefined && raw.alphabet === undefined) {
+    return { alphabet:{total:0,correct:0}, words:{total: raw.total||0, correct: raw.correct||0}, colors:{total:0,correct:0} };
+  }
+  return {
+    alphabet: raw.alphabet || {total:0,correct:0},
+    words: raw.words || {total:0,correct:0},
+    colors: raw.colors || {total:0,correct:0}
+  };
+}
+function saveEngStats(mode, c) {
+  const s=getEngStats();
+  if (!s[mode]) s[mode] = {total:0,correct:0};
+  s[mode].total++;
+  if (c) s[mode].correct++;
+  localStorage.setItem('kids_eng_stats',JSON.stringify(s));
+}
+function getEngTotals() {
+  const s = getEngStats();
+  const total = s.alphabet.total + s.words.total + s.colors.total;
+  const correct = s.alphabet.correct + s.words.correct + s.colors.correct;
+  return { total, correct };
+}
 
 function loadEnglishHome() {
-  const s=getEngStats();
+  const t = getEngTotals();
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  set('engTotal',s.total); set('engCorrect',s.correct);
-  set('engAccuracy',s.total>0?Math.round(s.correct/s.total*100)+'%':'0%');
+  set('engTotal', t.total);
+  set('engCorrect', t.correct);
+  set('engAccuracy', t.total>0?Math.round(t.correct/t.total*100)+'%':'0%');
+  renderAssessment('englishAssessment', evalEnglish(getEngStats()));
 }
 
 function startEnglishGame(mode) {
@@ -770,7 +935,7 @@ function checkEngAnswer(btn,sel,ans) {
   btn.classList.add(c?'correct':'wrong');
   if(c) { engState.correct++; speakEn(ans); createStarBurst(); }
   else { document.querySelectorAll('.english-option-btn').forEach(b=>{if(b.textContent===ans)b.classList.add('correct');}); }
-  saveEngStats(c);
+  saveEngStats(engState.mode, c);
   document.querySelectorAll('.english-option-btn').forEach(b=>b.onclick=null);
   const nb = document.createElement('button');
   nb.className = 'english-next-btn';
@@ -793,7 +958,14 @@ function showEnglishComplete() {
 }
 
 // ============ 故事模块 ============
-let storyState = { story:null, paraIndex:0, playing:false, rate:0.85 };
+let storyState = { story:null, paraIndex:0, playing:false, rate:0.85, startedAt:0, reported:false };
+
+function formatDuration(sec) {
+  sec = Math.max(0, Math.round(sec || 0));
+  if (sec < 60) return `${sec} 秒`;
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return s === 0 ? `${m} 分钟` : `${m} 分 ${s} 秒`;
+}
 
 async function loadStoryHome() {
   const grid = document.getElementById('storyGrid');
@@ -806,16 +978,23 @@ async function loadStoryHome() {
       grid.innerHTML = '<div class="kids-message">暂无故事</div>';
       return;
     }
-    grid.innerHTML = stories.map(s => `
-      <div class="kids-story-card" style="background:${s.bg}" onclick="openStory('${s.id}')">
-        <div class="kids-story-cover">${s.cover}</div>
-        <div class="kids-story-info">
-          <div class="kids-story-title">${s.title}</div>
-          <div class="kids-story-summary">${s.summary}</div>
+    grid.innerHTML = stories.map(s => {
+      const count = s.play_count || 0;
+      const badge = count > 0
+        ? `<span class="kids-story-count">📚 已讲 ${count} 次 · ${formatDuration(s.total_seconds)}</span>`
+        : `<span class="kids-story-count kids-story-count-new">还没讲过</span>`;
+      return `
+        <div class="kids-story-card" style="background:${s.bg}" onclick="openStory('${s.id}')">
+          <div class="kids-story-cover">${s.cover}</div>
+          <div class="kids-story-info">
+            <div class="kids-story-title">${s.title}</div>
+            <div class="kids-story-summary">${s.summary}</div>
+            ${badge}
+          </div>
+          <div class="kids-story-play">▶</div>
         </div>
-        <div class="kids-story-play">▶</div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch (e) {
     console.error('加载故事失败:', e);
     grid.innerHTML = '<div class="kids-message">加载失败，请重试</div>';
@@ -829,12 +1008,38 @@ async function openStory(id) {
       showToast('故事加载失败');
       return;
     }
-    storyState = { story, paraIndex:0, playing:false, rate:0.85 };
+    storyState = { story, paraIndex:0, playing:false, rate:0.85, startedAt: Date.now(), reported: false };
     switchView('story-read');
     renderStoryReader();
   } catch (e) {
     console.error('打开故事失败:', e);
     showToast('网络错误');
+  }
+}
+
+function reportStoryPlay() {
+  if (!storyState || !storyState.story || storyState.reported) return;
+  if (!storyState.startedAt) return;
+  const duration = Math.round((Date.now() - storyState.startedAt) / 1000);
+  if (duration < 3) { storyState.reported = true; return; } // 太短不记
+  storyState.reported = true;
+  const id = storyState.story.id;
+  // navigator.sendBeacon 在页面卸载时更可靠
+  try {
+    const body = JSON.stringify({ duration });
+    if (navigator.sendBeacon) {
+      const blob = new Blob([body], { type: 'application/json' });
+      navigator.sendBeacon(`/api/kids/stories/${id}/plays`, blob);
+    } else {
+      fetch(`/api/kids/stories/${id}/plays`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true
+      });
+    }
+  } catch (e) {
+    console.error('上报故事时长失败:', e);
   }
 }
 
@@ -913,6 +1118,7 @@ function speakParagraph() {
       setTimeout(speakParagraph, 600);
     } else {
       storyState.playing = false;
+      reportStoryPlay();
       renderStoryReader();
       createStarBurst();
       showToast('故事讲完啦！🎉');
@@ -970,6 +1176,15 @@ function setStoryRate(rate) {
 function exitStory() {
   if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
   window.speechSynthesis && window.speechSynthesis.cancel();
-  storyState = { story:null, paraIndex:0, playing:false, rate:0.85 };
+  reportStoryPlay();
+  storyState = { story:null, paraIndex:0, playing:false, rate:0.85, startedAt:0, reported:false };
   switchView('story-home');
 }
+
+// 页面关闭/切走时也尝试上报
+window.addEventListener('pagehide', () => {
+  if (storyState && storyState.story) reportStoryPlay();
+});
+window.addEventListener('beforeunload', () => {
+  if (storyState && storyState.story) reportStoryPlay();
+});

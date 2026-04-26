@@ -316,13 +316,20 @@ app.get('/api/kids/categories', (req, res) => {
 // 故事列表
 const storiesData = require('./data/kids_stories.json');
 app.get('/api/kids/stories', (req, res) => {
-  const list = (storiesData.stories || []).map(s => ({
-    id: s.id,
-    title: s.title,
-    cover: s.cover,
-    bg: s.bg,
-    summary: s.summary
-  }));
+  const statsMap = db.getStoryPlayStatsAll();
+  const list = (storiesData.stories || []).map(s => {
+    const st = statsMap[s.id];
+    return {
+      id: s.id,
+      title: s.title,
+      cover: s.cover,
+      bg: s.bg,
+      summary: s.summary,
+      play_count: st ? st.play_count : 0,
+      total_seconds: st ? st.total_seconds : 0,
+      last_played_at: st ? st.last_played_at : null
+    };
+  });
   res.json({ stories: list });
 });
 
@@ -330,7 +337,24 @@ app.get('/api/kids/stories', (req, res) => {
 app.get('/api/kids/stories/:id', (req, res) => {
   const story = (storiesData.stories || []).find(s => s.id === req.params.id);
   if (!story) return res.status(404).json({ error: '未找到故事' });
-  res.json(story);
+  const plays = db.getStoryPlays(req.params.id, 20);
+  const total = plays.reduce((sum, p) => sum + (p.duration_seconds || 0), 0);
+  res.json({
+    ...story,
+    play_count: plays.length,
+    total_seconds: total,
+    plays
+  });
+});
+
+// 记录故事播放
+app.post('/api/kids/stories/:id/plays', (req, res) => {
+  const { duration } = req.body || {};
+  const story = (storiesData.stories || []).find(s => s.id === req.params.id);
+  if (!story) return res.status(404).json({ error: '未找到故事' });
+  const result = db.recordStoryPlay(req.params.id, duration);
+  logger.info('故事播放已记录', { storyId: req.params.id, duration: result.duration_seconds });
+  res.status(201).json({ success: true, ...result });
 });
 
 // SPA fallback

@@ -733,10 +733,19 @@ class VocabDB {
         completed_at TEXT
       );
 
+      CREATE TABLE IF NOT EXISTS kids_story_plays (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        story_id TEXT NOT NULL,
+        duration_seconds INTEGER NOT NULL DEFAULT 0,
+        played_at TEXT DEFAULT (datetime('now','localtime'))
+      );
+
       CREATE INDEX IF NOT EXISTS idx_kids_chars_next_review ON kids_chars(next_review_at);
       CREATE INDEX IF NOT EXISTS idx_kids_chars_learned ON kids_chars(is_learned);
       CREATE INDEX IF NOT EXISTS idx_kids_reviews_char ON kids_char_reviews(char_id);
       CREATE INDEX IF NOT EXISTS idx_kids_reviews_date ON kids_char_reviews(reviewed_at);
+      CREATE INDEX IF NOT EXISTS idx_kids_story_plays_story ON kids_story_plays(story_id);
+      CREATE INDEX IF NOT EXISTS idx_kids_story_plays_date ON kids_story_plays(played_at);
     `);
   }
 
@@ -1124,6 +1133,38 @@ class VocabDB {
     return this.db.prepare(
       'SELECT DISTINCT category FROM kids_chars ORDER BY category'
     ).all().map(r => r.category);
+  }
+
+  // ============ 故事播放记录 ============
+  recordStoryPlay(storyId, durationSeconds) {
+    const dur = Math.max(0, Math.floor(Number(durationSeconds) || 0));
+    const info = this.db.prepare(
+      'INSERT INTO kids_story_plays (story_id, duration_seconds) VALUES (?, ?)'
+    ).run(storyId, dur);
+    return { id: info.lastInsertRowid, duration_seconds: dur };
+  }
+
+  getStoryPlayStatsAll() {
+    const rows = this.db.prepare(`
+      SELECT story_id,
+        COUNT(*) AS play_count,
+        COALESCE(SUM(duration_seconds), 0) AS total_seconds,
+        MAX(played_at) AS last_played_at
+      FROM kids_story_plays
+      GROUP BY story_id
+    `).all();
+    const map = {};
+    for (const r of rows) map[r.story_id] = r;
+    return map;
+  }
+
+  getStoryPlays(storyId, limit = 20) {
+    return this.db.prepare(`
+      SELECT * FROM kids_story_plays
+      WHERE story_id = ?
+      ORDER BY played_at DESC
+      LIMIT ?
+    `).all(storyId, limit);
   }
 
   close() {
