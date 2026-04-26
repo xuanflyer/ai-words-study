@@ -36,7 +36,7 @@ function speak(text, rate = 0.8) {
   const fireFallback = () => { if (!fired) { fired = true; fallback(); } };
 
   try {
-    const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
+    const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`);
     _speakAudio = audio;
     audio.addEventListener('error', fireFallback);
     const p = audio.play();
@@ -915,7 +915,7 @@ function speakParagraph() {
     }
   };
 
-  const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
+  const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`);
   _speakAudio = audio;
   audio.onended = onDone;
   audio.play().catch(() => {
