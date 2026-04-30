@@ -47,9 +47,9 @@ function switchTab(tab) {
   switch (tab) {
     case 'study': loadStudyTab(); break;
     case 'review': loadReviewTab(); break;
-    case 'library': loadLibrary(); loadCategories(); break;
+    case 'library': loadLibrary(); loadCategories(); loadBatchOptions(); break;
     case 'stats': loadStats(); break;
-    case 'add': renderPendingWords(); break;
+    case 'add': renderPendingWords(); renderBatchHistory(); break;
   }
 }
 
@@ -402,12 +402,14 @@ async function loadLibrary() {
     const search = document.getElementById('searchInput').value;
     const category = document.getElementById('categoryFilter').value;
     const is_learned = document.getElementById('learnedFilter').value;
+    const batch_id = document.getElementById('batchFilter').value;
     const sort_by = document.getElementById('sortFilter').value;
 
     const params = new URLSearchParams({ page: libraryPage, limit: 30 });
     if (search) params.set('search', search);
     if (category) params.set('category', category);
     if (is_learned) params.set('is_learned', is_learned);
+    if (batch_id) params.set('batch_id', batch_id);
     if (sort_by) params.set('sort_by', sort_by);
 
     const data = await api(`/api/words?${params}`);
@@ -441,6 +443,19 @@ async function loadCategories() {
     const currentVal = select.value;
     select.innerHTML = '<option value="">全部分类</option>' +
       data.categories.map(c => `<option value="${c}" ${c === currentVal ? 'selected' : ''}>${c}</option>`).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function loadBatchOptions() {
+  try {
+    const data = await api('/api/batches');
+    const select = document.getElementById('batchFilter');
+    const currentVal = select.value;
+    const opts = data.batches.map(b => {
+      const label = `${b.created_at.slice(0, 16)} (+${b.added_count})`;
+      return `<option value="${b.id}" ${String(b.id) === currentVal ? 'selected' : ''}>${label}</option>`;
+    }).join('');
+    select.innerHTML = '<option value="">全部批次</option>' + opts;
   } catch (e) { console.error(e); }
 }
 
@@ -1078,6 +1093,101 @@ async function renderPendingWords() {
         </div>`).join('');
   } catch (e) {
     list.innerHTML = '<p class="pending-empty">加载失败，请刷新重试</p>';
+  }
+}
+
+// ============ 一键补全并入库 ============
+async function enrichPending() {
+  const btn = document.getElementById('enrichBtn');
+  const status = document.getElementById('enrichStatus');
+  if (!btn || btn.disabled) return;
+
+  // 先确认 pending 非空
+  try {
+    const p = await api('/api/pending');
+    if (!p.words || p.words.length === 0) {
+      showToast('待添加词库为空', 'info');
+      return;
+    }
+    if (!confirm(`将对 ${p.words.length} 个待添加单词进行 AI 补全并入库（已存在的词会跳过），确定继续？`)) return;
+  } catch (e) { return; }
+
+  btn.disabled = true;
+  status.textContent = '正在补全… 这可能需要一会儿';
+  try {
+    const result = await api('/api/pending/enrich', { method: 'POST', body: { concurrency: 3 } });
+    if (!result.batch) {
+      status.textContent = result.message || '已完成';
+    } else {
+      const b = result.batch;
+      status.textContent = `批次 #${b.id}：新增 ${b.added_count}，跳过 ${b.skipped_count}，失败 ${b.failed_count}`;
+      showToast(`补全完成：新增 ${b.added_count}，跳过 ${b.skipped_count}，失败 ${b.failed_count}`, 'success');
+    }
+    await renderPendingWords();
+    await renderBatchHistory();
+  } catch (e) {
+    status.textContent = '补全失败：' + (e.message || e);
+    showToast('补全失败', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function renderBatchHistory() {
+  const container = document.getElementById('batchList');
+  if (!container) return;
+  try {
+    const data = await api('/api/batches');
+    if (!data.batches || data.batches.length === 0) {
+      container.innerHTML = '<p class="pending-empty">还没有补全批次</p>';
+      return;
+    }
+    container.innerHTML = data.batches.map(b => `
+      <div class="batch-item" data-id="${b.id}">
+        <div class="batch-summary" onclick="toggleBatchDetail(${b.id})" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:10px 12px;border:1px solid #eee;border-radius:6px;margin-bottom:8px">
+          <div>
+            <strong>批次 #${b.id}</strong>
+            <span style="color:#888;margin-left:8px;font-size:13px">${b.created_at}</span>
+          </div>
+          <div style="font-size:13px;color:#555">
+            新增 <strong>${b.added_count}</strong> · 跳过 ${b.skipped_count} · 失败 ${b.failed_count}
+          </div>
+        </div>
+        <div class="batch-detail" id="batchDetail-${b.id}" style="display:none;padding:8px 12px 12px;border:1px solid #eee;border-top:none;border-radius:0 0 6px 6px;margin-top:-8px;margin-bottom:8px"></div>
+      </div>
+    `).join('');
+  } catch (e) {
+    container.innerHTML = '<p class="pending-empty">加载失败</p>';
+  }
+}
+
+async function toggleBatchDetail(id) {
+  const el = document.getElementById(`batchDetail-${id}`);
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '加载中…';
+  try {
+    const data = await api(`/api/batches/${id}`);
+    const items = data.batch.items || [];
+    if (items.length === 0) {
+      el.innerHTML = '<span style="color:#888">无明细</span>';
+      return;
+    }
+    el.innerHTML = items.map(it => {
+      const color = it.status === 'added' ? '#1f9d55' : it.status === 'skipped' ? '#888' : '#d93025';
+      const label = it.status === 'added' ? '新增' : it.status === 'skipped' ? '跳过' : '失败';
+      const errorText = it.error ? ` <span style="color:#d93025">— ${escapeHtml(it.error)}</span>` : '';
+      const link = it.word_id
+        ? ` <a href="javascript:openWordModal(${it.word_id})" style="font-size:12px">查看</a>`
+        : '';
+      return `<div style="padding:4px 0;border-bottom:1px dashed #f0f0f0;font-size:13px">
+        <span style="color:${color};font-weight:600;display:inline-block;width:40px">${label}</span>
+        <span>${escapeHtml(it.word)}</span>${link}${errorText}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<span style="color:#d93025">加载失败</span>';
   }
 }
 

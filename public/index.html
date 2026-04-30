@@ -83,6 +83,9 @@
               <option value="false">未学会</option>
               <option value="true">已学会</option>
             </select>
+            <select id="batchFilter" onchange="libraryPage=1; loadLibrary()">
+              <option value="">全部批次</option>
+            </select>
             <select id="sortFilter" onchange="libraryPage=1; loadLibrary()">
               <option value="">默认排序</option>
               <option value="last_reviewed_desc">最近学习 ↓</option>
@@ -128,6 +131,14 @@
             <span class="badge" id="pendingBadge" style="display:none">0</span>
           </div>
           <div class="pending-list" id="pendingList"><p class="pending-empty">输入单词或长按例句中的词可加入此列表</p></div>
+          <div class="pending-actions" style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button class="btn btn-primary" id="enrichBtn" onclick="enrichPending()">一键补全并入库</button>
+            <span class="enrich-status" id="enrichStatus" style="font-size:13px;color:#888"></span>
+          </div>
+        </div>
+        <div class="batch-section" id="batchSection" style="margin-top:24px">
+          <div class="pending-header"><span>补全批次历史</span></div>
+          <div class="batch-list" id="batchList"><p class="pending-empty">还没有补全批次</p></div>
         </div>
       </section>
     </main>

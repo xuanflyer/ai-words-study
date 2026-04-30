@@ -89,13 +89,40 @@ class VocabDB {
         added_at TEXT DEFAULT (datetime('now', 'localtime'))
       );
 
+      CREATE TABLE IF NOT EXISTS enrichment_batches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at TEXT DEFAULT (datetime('now', 'localtime')),
+        added_count INTEGER DEFAULT 0,
+        skipped_count INTEGER DEFAULT 0,
+        failed_count INTEGER DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS enrichment_batch_words (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        word TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('added','skipped','failed')),
+        word_id INTEGER,
+        error TEXT,
+        FOREIGN KEY (batch_id) REFERENCES enrichment_batches(id) ON DELETE CASCADE
+      );
+
       CREATE INDEX IF NOT EXISTS idx_words_next_review ON words(next_review_at);
       CREATE INDEX IF NOT EXISTS idx_words_is_learned ON words(is_learned);
       CREATE INDEX IF NOT EXISTS idx_words_mastery ON words(mastery_level);
       CREATE INDEX IF NOT EXISTS idx_review_history_word ON review_history(word_id);
       CREATE INDEX IF NOT EXISTS idx_review_history_date ON review_history(reviewed_at);
       CREATE INDEX IF NOT EXISTS idx_sessions_time ON study_sessions(scheduled_time);
+      CREATE INDEX IF NOT EXISTS idx_batch_words_batch ON enrichment_batch_words(batch_id);
     `);
+
+    // 安全添加 words.batch_id 列（旧数据 batch_id 为 NULL，不影响历史学习记录）
+    const wordsCols = this.db.prepare(`PRAGMA table_info(words)`).all();
+    if (!wordsCols.some(c => c.name === 'batch_id')) {
+      this.db.exec(`ALTER TABLE words ADD COLUMN batch_id INTEGER`);
+    }
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_words_batch ON words(batch_id);`);
+
     this.initKids();
   }
 
@@ -133,7 +160,7 @@ class VocabDB {
   }
 
   // ============ 词汇查询 ============
-  getWords({ category, is_learned, search, sort_by, page = 1, limit = 50 } = {}) {
+  getWords({ category, is_learned, search, batch_id, sort_by, page = 1, limit = 50 } = {}) {
     let where = ['1=1'];
     const params = {};
 
@@ -148,6 +175,10 @@ class VocabDB {
     if (search) {
       where.push('(word LIKE @search OR chinese LIKE @search)');
       params.search = `%${search}%`;
+    }
+    if (batch_id !== undefined && batch_id !== null && batch_id !== '') {
+      where.push('batch_id = @batch_id');
+      params.batch_id = parseInt(batch_id);
     }
 
     const offset = (page - 1) * limit;
@@ -690,6 +721,98 @@ class VocabDB {
 
   deletePendingWord(id) {
     this.db.prepare('DELETE FROM pending_words WHERE id = ?').run(id);
+  }
+
+  deletePendingByWord(word) {
+    this.db.prepare('DELETE FROM pending_words WHERE word = ? COLLATE NOCASE').run(word);
+  }
+
+  // ============ 单词补全批次 ============
+  wordExists(word) {
+    const row = this.db.prepare('SELECT id FROM words WHERE word = ? COLLATE NOCASE').get(word);
+    return row ? row.id : null;
+  }
+
+  createEnrichmentBatch() {
+    const info = this.db.prepare(
+      'INSERT INTO enrichment_batches (added_count, skipped_count, failed_count) VALUES (0, 0, 0)'
+    ).run();
+    return info.lastInsertRowid;
+  }
+
+  // 写入 enriched 词条；该词若已存在则不写入，仅返回已存在的 id（保护历史数据）
+  addEnrichedWord({ word, phonetic, chinese, category, examples, synonyms, batch_id }) {
+    const existingId = this.wordExists(word);
+    if (existingId) return { id: existingId, inserted: false };
+    const info = this.db.prepare(`
+      INSERT INTO words (word, phonetic, chinese, category, examples, synonyms, batch_id)
+      VALUES (@word, @phonetic, @chinese, @category, @examples, @synonyms, @batch_id)
+    `).run({
+      word: word.trim(),
+      phonetic: phonetic || '',
+      chinese,
+      category: category || '未分类',
+      examples: JSON.stringify(examples || []),
+      synonyms: JSON.stringify(synonyms || []),
+      batch_id
+    });
+    return { id: info.lastInsertRowid, inserted: true };
+  }
+
+  recordBatchItem(batchId, { word, status, word_id = null, error = null }) {
+    this.db.prepare(`
+      INSERT INTO enrichment_batch_words (batch_id, word, status, word_id, error)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(batchId, word, status, word_id, error);
+  }
+
+  finalizeBatch(batchId) {
+    const counts = this.db.prepare(`
+      SELECT
+        SUM(CASE WHEN status='added'   THEN 1 ELSE 0 END) AS added_count,
+        SUM(CASE WHEN status='skipped' THEN 1 ELSE 0 END) AS skipped_count,
+        SUM(CASE WHEN status='failed'  THEN 1 ELSE 0 END) AS failed_count
+      FROM enrichment_batch_words WHERE batch_id = ?
+    `).get(batchId);
+    this.db.prepare(`
+      UPDATE enrichment_batches
+      SET added_count = ?, skipped_count = ?, failed_count = ?
+      WHERE id = ?
+    `).run(counts.added_count || 0, counts.skipped_count || 0, counts.failed_count || 0, batchId);
+  }
+
+  // 删除空批次（无任何记录的批次，比如 pending 列表为空时）
+  deleteBatchIfEmpty(batchId) {
+    const row = this.db.prepare(
+      'SELECT COUNT(*) AS n FROM enrichment_batch_words WHERE batch_id = ?'
+    ).get(batchId);
+    if (!row || row.n === 0) {
+      this.db.prepare('DELETE FROM enrichment_batches WHERE id = ?').run(batchId);
+      return true;
+    }
+    return false;
+  }
+
+  listEnrichmentBatches() {
+    return this.db.prepare(`
+      SELECT id, created_at, added_count, skipped_count, failed_count
+      FROM enrichment_batches
+      ORDER BY created_at DESC, id DESC
+    `).all();
+  }
+
+  getEnrichmentBatch(id) {
+    const batch = this.db.prepare(
+      'SELECT * FROM enrichment_batches WHERE id = ?'
+    ).get(id);
+    if (!batch) return null;
+    const items = this.db.prepare(`
+      SELECT word, status, word_id, error
+      FROM enrichment_batch_words
+      WHERE batch_id = ?
+      ORDER BY id ASC
+    `).all(id);
+    return { ...batch, items };
   }
 
   // ============ 儿童识字模块 ============

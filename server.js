@@ -3,6 +3,7 @@ const path = require('path');
 const cron = require('node-cron');
 const { VocabDB, REVIEW_INTERVALS, KIDS_REVIEW_INTERVALS } = require('./db');
 const logger = require('./logger');
+const { enrichBatch } = require('./enrich');
 
 const app = express();
 const PORT = process.env.PORT || 80;
@@ -34,11 +35,12 @@ app.use((req, res, next) => {
 
 // 获取词汇列表
 app.get('/api/words', (req, res) => {
-  const { category, is_learned, search, sort_by, page, limit } = req.query;
+  const { category, is_learned, search, batch_id, sort_by, page, limit } = req.query;
   const result = db.getWords({
     category,
     is_learned: is_learned !== undefined ? is_learned === 'true' : undefined,
     search,
+    batch_id,
     sort_by,
     page: parseInt(page) || 1,
     limit: parseInt(limit) || 50
@@ -222,6 +224,81 @@ app.patch('/api/pending/:id', (req, res) => {
 app.delete('/api/pending/:id', (req, res) => {
   db.deletePendingWord(parseInt(req.params.id));
   res.json({ success: true });
+});
+
+// 一键补全 + 入库：取所有 pending 词 → 已存在跳过 → 否则调 Claude CLI 生成 → 写入 words → 记入批次
+app.post('/api/pending/enrich', async (req, res) => {
+  const pending = db.getPendingWords();
+  if (pending.length === 0) {
+    return res.json({ message: '待添加词库为空', batch: null });
+  }
+
+  const concurrency = Math.max(1, Math.min(parseInt(req.body && req.body.concurrency) || 3, 5));
+  const batchId = db.createEnrichmentBatch();
+  logger.info('开始补全批次', { batchId, total: pending.length, concurrency });
+
+  const toEnrich = [];
+  for (const p of pending) {
+    const existingId = db.wordExists(p.word);
+    if (existingId) {
+      db.recordBatchItem(batchId, { word: p.word, status: 'skipped', word_id: existingId });
+      db.deletePendingByWord(p.word);
+    } else {
+      toEnrich.push(p.word);
+    }
+  }
+
+  await enrichBatch(toEnrich, {
+    concurrency,
+    onItem: (item) => {
+      if (item.ok) {
+        try {
+          const r = db.addEnrichedWord({
+            word: item.word,
+            phonetic: item.data.phonetic,
+            chinese: item.data.chinese,
+            category: item.data.category,
+            examples: item.data.examples,
+            synonyms: item.data.synonyms,
+            batch_id: batchId
+          });
+          if (r.inserted) {
+            db.recordBatchItem(batchId, { word: item.word, status: 'added', word_id: r.id });
+          } else {
+            db.recordBatchItem(batchId, { word: item.word, status: 'skipped', word_id: r.id });
+          }
+          db.deletePendingByWord(item.word);
+        } catch (e) {
+          logger.error('入库失败', { word: item.word, error: e.message });
+          db.recordBatchItem(batchId, { word: item.word, status: 'failed', error: e.message });
+        }
+      } else {
+        logger.warn('补全失败', { word: item.word, error: item.error });
+        db.recordBatchItem(batchId, { word: item.word, status: 'failed', error: item.error });
+      }
+    }
+  });
+
+  db.finalizeBatch(batchId);
+  const batch = db.getEnrichmentBatch(batchId);
+  logger.info('补全批次完成', {
+    batchId,
+    added: batch.added_count,
+    skipped: batch.skipped_count,
+    failed: batch.failed_count
+  });
+  res.json({ batch });
+});
+
+// --- 补全批次历史 ---
+app.get('/api/batches', (req, res) => {
+  res.json({ batches: db.listEnrichmentBatches() });
+});
+
+app.get('/api/batches/:id', (req, res) => {
+  const batch = db.getEnrichmentBatch(parseInt(req.params.id));
+  if (!batch) return res.status(404).json({ error: '批次不存在' });
+  res.json({ batch });
 });
 
 // 获取艾宾浩斯间隔配置
