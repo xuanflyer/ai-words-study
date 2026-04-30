@@ -5,7 +5,7 @@ const { VocabDB, REVIEW_INTERVALS, KIDS_REVIEW_INTERVALS } = require('./db');
 const logger = require('./logger');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 
 // 初始化数据库
 const db = new VocabDB(path.join(__dirname, 'vocab.db'));
