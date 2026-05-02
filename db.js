@@ -1366,7 +1366,9 @@ class VocabDB {
 
   // ============ 故事播放记录 ============
   recordStoryPlay(storyId, durationSeconds) {
-    const dur = Math.max(0, Math.floor(Number(durationSeconds) || 0));
+    // 上限 1800 秒：单次故事播放再长也不会超过 30 分钟，防止页面挂机导致脏数据。
+    const raw = Math.max(0, Math.floor(Number(durationSeconds) || 0));
+    const dur = Math.min(raw, 1800);
     const info = this.db.prepare(
       'INSERT INTO kids_story_plays (story_id, duration_seconds) VALUES (?, ?)'
     ).run(storyId, dur);
