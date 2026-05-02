@@ -165,6 +165,18 @@
         <button class="btn btn-ghost" id="fcNextBtn" onclick="flashcardNext()">下一个 →</button>
       </div>
       <div class="flashcard-hint">点击单词听发音 · 空格翻面 · ←/→ 切换 · A/S/D 展开例句 · ↑ 记住 ↓ 忘记 · Esc 退出</div>
+      <div class="fc-spelling-bar">
+        <button class="btn btn-ghost btn-sm" id="fcSpellingToggleBtn" onclick="toggleFcSpelling()">✏ 拼写练习</button>
+        <div class="fc-spelling-section" id="fcSpellingSection" style="display:none">
+          <div class="fc-spelling-input-row">
+            <input type="text" id="fcSpellingInput" class="spelling-input" placeholder="拼写单词…"
+              autocomplete="off" autocapitalize="none" spellcheck="false"
+              onkeydown="if(event.key==='Enter'){event.stopPropagation();checkFcSpelling();}else if(event.key!=='Escape'){event.stopPropagation();}">
+            <button class="btn btn-primary btn-sm" onclick="checkFcSpelling()">确认</button>
+          </div>
+          <div id="fcSpellingResult"></div>
+        </div>
+      </div>
     </div>
 
     <!-- 长按选词菜单 -->

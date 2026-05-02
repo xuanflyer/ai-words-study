@@ -1038,6 +1038,32 @@ a { color: var(--primary); text-decoration: none; }
   font-size: 0.8rem;
   font-weight: 600;
 }
+.fc-spelling-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 720px;
+  width: 100%;
+  margin: 4px auto 0;
+}
+.fc-spelling-section {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.fc-spelling-input-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+#fcSpellingResult {
+  font-size: 0.85rem;
+  text-align: center;
+  min-height: 1.3em;
+}
 .flashcard-hint {
   text-align: center;
   font-size: 0.75rem;

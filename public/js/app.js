@@ -319,6 +319,7 @@ function flashcardNext() {
   if (flashcardState.index < flashcardState.words.length - 1) {
     flashcardState.index++;
     flashcardState.flipped = false;
+    resetFcSpelling();
     renderFlashcard();
   }
 }
@@ -327,6 +328,7 @@ function flashcardPrev() {
   if (flashcardState.index > 0) {
     flashcardState.index--;
     flashcardState.flipped = false;
+    resetFcSpelling();
     renderFlashcard();
   }
 }
@@ -381,6 +383,9 @@ async function flashcardReview(remembered) {
 document.addEventListener('keydown', (e) => {
   const overlay = document.getElementById('flashcardOverlay');
   if (!overlay || !overlay.classList.contains('active')) return;
+
+  // Don't intercept when spelling input is focused (let Enter/stopPropagation handle it there)
+  if (document.activeElement && document.activeElement.id === 'fcSpellingInput') return;
 
   // a / s / d —— 切换对应例句的中文显隐（翻面后才渲染例句，无需额外判断）
   const exKeyIdx = { a: 0, s: 1, d: 2 }[e.key.toLowerCase()];
@@ -1322,6 +1327,44 @@ function checkSpelling(word) {
     input.style.borderColor = 'var(--success)';
   } else {
     result.innerHTML = `<span style="color:var(--danger)">✗ 不对，正确答案：<strong>${escapeHtml(word)}</strong></span>`;
+    input.style.borderColor = 'var(--danger)';
+  }
+  input.select();
+}
+
+// Flashcard spelling practice
+function toggleFcSpelling() {
+  const section = document.getElementById('fcSpellingSection');
+  const btn = document.getElementById('fcSpellingToggleBtn');
+  const show = section.style.display === 'none';
+  section.style.display = show ? 'flex' : 'none';
+  btn.classList.toggle('active', show);
+  if (show) {
+    resetFcSpelling();
+    document.getElementById('fcSpellingInput').focus();
+  }
+}
+
+function resetFcSpelling() {
+  const input = document.getElementById('fcSpellingInput');
+  if (!input) return;
+  input.value = '';
+  input.style.borderColor = '';
+  document.getElementById('fcSpellingResult').innerHTML = '';
+}
+
+function checkFcSpelling() {
+  const w = flashcardState.words[flashcardState.index];
+  if (!w) return;
+  const input = document.getElementById('fcSpellingInput');
+  const result = document.getElementById('fcSpellingResult');
+  const typed = input.value.trim().toLowerCase();
+  if (!typed) return;
+  if (typed === w.word.toLowerCase()) {
+    result.innerHTML = '<span style="color:var(--success)">✓ 正确！</span>';
+    input.style.borderColor = 'var(--success)';
+  } else {
+    result.innerHTML = `<span style="color:var(--danger)">✗ 不对，正确答案：<strong>${escapeHtml(w.word)}</strong></span>`;
     input.style.borderColor = 'var(--danger)';
   }
   input.select();
