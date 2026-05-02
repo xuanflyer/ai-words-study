@@ -107,6 +107,13 @@ class VocabDB {
         FOREIGN KEY (batch_id) REFERENCES enrichment_batches(id) ON DELETE CASCADE
       );
 
+      CREATE TABLE IF NOT EXISTS study_time_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        seconds INTEGER NOT NULL,
+        recorded_at TEXT DEFAULT (datetime('now', 'localtime'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_study_time_date ON study_time_log(recorded_at);
       CREATE INDEX IF NOT EXISTS idx_words_next_review ON words(next_review_at);
       CREATE INDEX IF NOT EXISTS idx_words_is_learned ON words(is_learned);
       CREATE INDEX IF NOT EXISTS idx_words_mastery ON words(mastery_level);
@@ -631,6 +638,34 @@ class VocabDB {
     // 连续学习天数
     const streakDays = this._calculateStreak();
 
+    // 学习时长统计
+    const todayStudySeconds = this.db.prepare(`
+      SELECT COALESCE(SUM(seconds), 0) AS s FROM study_time_log
+      WHERE date(recorded_at) = @today
+    `).get({ today }).s;
+
+    const totalStudySeconds = this.db.prepare(
+      'SELECT COALESCE(SUM(seconds), 0) AS s FROM study_time_log'
+    ).get().s;
+
+    const dailyStudyRows = this.db.prepare(`
+      SELECT date(recorded_at) AS date, COALESCE(SUM(seconds), 0) AS seconds
+      FROM study_time_log
+      WHERE recorded_at >= datetime('now', '-7 days', 'localtime')
+      GROUP BY date(recorded_at)
+      ORDER BY date ASC
+    `).all();
+    // 对齐成 7 天序列，缺失的日期补 0
+    const dailyStudyTime = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const pad = n => String(n).padStart(2, '0');
+      const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const row = dailyStudyRows.find(r => r.date === dateStr);
+      dailyStudyTime.push({ date: dateStr, seconds: row ? row.seconds : 0 });
+    }
+
     return {
       total,
       learned,
@@ -641,8 +676,20 @@ class VocabDB {
       categoryDistribution,
       recentActivity,
       todayReviews,
-      streakDays
+      streakDays,
+      todayStudySeconds,
+      totalStudySeconds,
+      dailyStudyTime
     };
+  }
+
+  recordStudyTime(seconds) {
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    if (s === 0) return { id: null, seconds: 0 };
+    const info = this.db.prepare(
+      'INSERT INTO study_time_log (seconds) VALUES (?)'
+    ).run(s);
+    return { id: info.lastInsertRowid, seconds: s };
   }
 
   _calculateStreak() {

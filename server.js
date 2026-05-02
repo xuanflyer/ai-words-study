@@ -182,6 +182,16 @@ app.get('/api/stats', (req, res) => {
   res.json(stats);
 });
 
+// 记录学习时长（前端每隔一段时间或卸载时上报累计秒数）
+app.post('/api/study-time', (req, res) => {
+  const seconds = parseInt(req.body && req.body.seconds);
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 600) {
+    return res.status(400).json({ error: 'seconds 必须为 1..600 的整数' });
+  }
+  const result = db.recordStudyTime(seconds);
+  res.json({ success: true, ...result });
+});
+
 app.get('/api/history', (req, res) => {
   const { page, limit } = req.query;
   const result = db.getReviewHistory({

@@ -34,7 +34,63 @@ document.addEventListener('DOMContentLoaded', () => {
   requestNotificationPermission();
   // 每分钟检查一次是否需要推送
   setInterval(checkScheduledPush, 60000);
+  startStudyTimer();
 });
+
+// ============ Study Time Tracker ============
+// 仅在「今日学习 / 艾宾浩斯复习 / 卡片学习」场景下，且页面可见、最近 60s 有用户操作时计时。
+// 每 30s 把累计秒数提交一次；页面隐藏/卸载时通过 sendBeacon 兜底提交。
+let studyTrackedSeconds = 0;
+let studyLastActivityAt = Date.now();
+const STUDY_IDLE_MS = 60_000;
+const STUDY_FLUSH_INTERVAL_S = 30;
+
+function isInLearningContext() {
+  if (document.visibilityState !== 'visible') return false;
+  if (Date.now() - studyLastActivityAt > STUDY_IDLE_MS) return false;
+  const overlay = document.getElementById('flashcardOverlay');
+  if (overlay && overlay.classList.contains('active')) return true;
+  return currentTab === 'study' || currentTab === 'review';
+}
+
+function flushStudyTime({ beacon = false } = {}) {
+  if (studyTrackedSeconds <= 0) return;
+  const seconds = studyTrackedSeconds;
+  studyTrackedSeconds = 0;
+  const payload = JSON.stringify({ seconds });
+  if (beacon && navigator.sendBeacon) {
+    const blob = new Blob([payload], { type: 'application/json' });
+    navigator.sendBeacon('/api/study-time', blob);
+    return;
+  }
+  fetch('/api/study-time', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+    keepalive: true
+  }).catch(() => {
+    // 失败不重试，避免循环上报；丢失少量时长可接受
+  });
+}
+
+function startStudyTimer() {
+  const bumpActivity = () => { studyLastActivityAt = Date.now(); };
+  ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(ev => {
+    window.addEventListener(ev, bumpActivity, { passive: true });
+  });
+
+  setInterval(() => {
+    if (isInLearningContext()) {
+      studyTrackedSeconds += 1;
+      if (studyTrackedSeconds >= STUDY_FLUSH_INTERVAL_S) flushStudyTime();
+    }
+  }, 1000);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushStudyTime({ beacon: true });
+  });
+  window.addEventListener('pagehide', () => flushStudyTime({ beacon: true }));
+}
 
 // ============ Tabs ============
 function switchTab(tab) {
@@ -509,8 +565,41 @@ async function loadStats() {
           <div class="stat-value">${stats.streakDays}</div>
           <div class="stat-label">连续学习天数</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-value">${formatDuration(stats.todayStudySeconds || 0)}</div>
+          <div class="stat-label">今日学习时长</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${formatDuration(stats.totalStudySeconds || 0)}</div>
+          <div class="stat-label">累计学习时长</div>
+        </div>
       </div>
     `;
+
+    // 最近7天学习时长柱状图
+    if (Array.isArray(stats.dailyStudyTime) && stats.dailyStudyTime.length > 0) {
+      const maxSec = Math.max(...stats.dailyStudyTime.map(d => d.seconds), 1);
+      html += `
+        <div class="chart-section">
+          <h3>最近7天学习时长</h3>
+          <div class="bar-chart">
+            ${stats.dailyStudyTime.map(d => {
+              const h = Math.round((d.seconds / maxSec) * 90);
+              const label = d.seconds > 0 ? formatDuration(d.seconds) : '0';
+              return `
+                <div class="bar-group">
+                  <div class="bar-value">${label}</div>
+                  <div class="bar-wrapper">
+                    <div class="bar remembered" style="height:${h}px" title="${formatDuration(d.seconds)}"></div>
+                  </div>
+                  <div class="bar-label">${d.date.slice(5)}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
 
     // 最近7天复习量柱状图
     if (stats.recentActivity.length > 0) {
@@ -1192,6 +1281,16 @@ async function toggleBatchDetail(id) {
 }
 
 // ============ Utils ============
+function formatDuration(sec) {
+  const s = Math.max(0, Math.floor(Number(sec) || 0));
+  if (s < 60) return `${s}秒`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}分${s % 60 ? (s % 60) + '秒' : ''}`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm ? `${h}时${rm}分` : `${h}时`;
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
