@@ -783,6 +783,22 @@ async function openWordModal(id) {
             <button class="btn btn-outline" onclick="unlearnAction(${w.id})">重新学习</button>
           `}
         </div>
+
+        <div class="modal-section">
+          <div class="modal-section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>拼写练习</span>
+            <button class="btn btn-outline btn-sm" id="spellingToggleBtn" onclick="toggleSpellingPractice()">开始练习</button>
+          </div>
+          <div id="spellingPractice" style="display:none;margin-top:10px">
+            <div style="display:flex;gap:8px">
+              <input type="text" id="spellingInput" class="spelling-input" placeholder="输入单词…"
+                autocomplete="off" autocapitalize="none" spellcheck="false"
+                onkeydown="if(event.key==='Enter')checkSpelling('${escapeAttr(w.word)}')">
+              <button class="btn btn-primary btn-sm" onclick="checkSpelling('${escapeAttr(w.word)}')">确认</button>
+            </div>
+            <div id="spellingResult" style="margin-top:8px;font-size:0.9rem;min-height:1.4em"></div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -1278,6 +1294,37 @@ async function toggleBatchDetail(id) {
   } catch (e) {
     el.innerHTML = '<span style="color:#d93025">加载失败</span>';
   }
+}
+
+// ============ Spelling Practice ============
+function toggleSpellingPractice() {
+  const section = document.getElementById('spellingPractice');
+  const btn = document.getElementById('spellingToggleBtn');
+  const show = section.style.display === 'none';
+  section.style.display = show ? 'block' : 'none';
+  btn.textContent = show ? '收起' : '开始练习';
+  if (show) {
+    const input = document.getElementById('spellingInput');
+    input.value = '';
+    input.style.borderColor = '';
+    document.getElementById('spellingResult').innerHTML = '';
+    input.focus();
+  }
+}
+
+function checkSpelling(word) {
+  const input = document.getElementById('spellingInput');
+  const result = document.getElementById('spellingResult');
+  const typed = input.value.trim().toLowerCase();
+  if (!typed) return;
+  if (typed === word.toLowerCase()) {
+    result.innerHTML = '<span style="color:var(--success)">✓ 正确！</span>';
+    input.style.borderColor = 'var(--success)';
+  } else {
+    result.innerHTML = `<span style="color:var(--danger)">✗ 不对，正确答案：<strong>${escapeHtml(word)}</strong></span>`;
+    input.style.borderColor = 'var(--danger)';
+  }
+  input.select();
 }
 
 // ============ Utils ============
