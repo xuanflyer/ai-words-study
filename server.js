@@ -441,6 +441,26 @@ app.get('/api/kids/stories/:id', (req, res) => {
   });
 });
 
+// 记录儿童学习时长（按子模块），前端定时或卸载时上报累计秒数
+app.post('/api/kids/study-time', (req, res) => {
+  const { module, seconds } = req.body || {};
+  const sec = parseInt(seconds);
+  if (!['literacy', 'math', 'english', 'story'].includes(module)) {
+    return res.status(400).json({ error: 'module 非法' });
+  }
+  if (!Number.isFinite(sec) || sec <= 0 || sec > 600) {
+    return res.status(400).json({ error: 'seconds 必须为 1..600 的整数' });
+  }
+  const result = db.recordKidsStudyTime(module, sec);
+  res.json({ success: true, ...result });
+});
+
+// 学习统计总览：近 7 日 + 全部累计 + 各模块对比 + 每日明细
+app.get('/api/kids/study-time/overview', (req, res) => {
+  const overview = db.getKidsStudyTimeOverview();
+  res.json(overview);
+});
+
 // 记录故事播放
 app.post('/api/kids/stories/:id/plays', (req, res) => {
   const { duration } = req.body || {};

@@ -910,12 +910,21 @@ class VocabDB {
         played_at TEXT DEFAULT (datetime('now','localtime'))
       );
 
+      CREATE TABLE IF NOT EXISTS kids_study_time_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        module TEXT NOT NULL CHECK(module IN ('literacy','math','english','story')),
+        seconds INTEGER NOT NULL,
+        recorded_at TEXT DEFAULT (datetime('now','localtime'))
+      );
+
       CREATE INDEX IF NOT EXISTS idx_kids_chars_next_review ON kids_chars(next_review_at);
       CREATE INDEX IF NOT EXISTS idx_kids_chars_learned ON kids_chars(is_learned);
       CREATE INDEX IF NOT EXISTS idx_kids_reviews_char ON kids_char_reviews(char_id);
       CREATE INDEX IF NOT EXISTS idx_kids_reviews_date ON kids_char_reviews(reviewed_at);
       CREATE INDEX IF NOT EXISTS idx_kids_story_plays_story ON kids_story_plays(story_id);
       CREATE INDEX IF NOT EXISTS idx_kids_story_plays_date ON kids_story_plays(played_at);
+      CREATE INDEX IF NOT EXISTS idx_kids_study_time_module ON kids_study_time_log(module);
+      CREATE INDEX IF NOT EXISTS idx_kids_study_time_date ON kids_study_time_log(recorded_at);
     `);
   }
 
@@ -1385,6 +1394,89 @@ class VocabDB {
       ORDER BY played_at DESC
       LIMIT ?
     `).all(storyId, limit);
+  }
+
+  // ============ 儿童学习时长记录 ============
+  // 模块：literacy / math / english / story
+  // 注意：story 时长本身已记录到 kids_story_plays，仅当不通过故事 reader 上报时才会写到这张表。
+  recordKidsStudyTime(module, seconds) {
+    const allowed = ['literacy', 'math', 'english', 'story'];
+    if (!allowed.includes(module)) return { id: null, seconds: 0 };
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    if (s === 0) return { id: null, seconds: 0 };
+    const info = this.db.prepare(
+      'INSERT INTO kids_study_time_log (module, seconds) VALUES (?, ?)'
+    ).run(module, s);
+    return { id: info.lastInsertRowid, module, seconds: s };
+  }
+
+  // 学习统计总览：合并 kids_study_time_log（literacy/math/english）+ kids_story_plays（story）。
+  getKidsStudyTimeOverview() {
+    const MODULES = ['literacy', 'math', 'english', 'story'];
+
+    // 各模块整体累计时长
+    const allTotalsRows = this.db.prepare(`
+      SELECT module, COALESCE(SUM(seconds), 0) AS seconds
+      FROM kids_study_time_log
+      GROUP BY module
+    `).all();
+    const storyAll = this.db.prepare(
+      'SELECT COALESCE(SUM(duration_seconds), 0) AS seconds FROM kids_story_plays'
+    ).get().seconds;
+
+    const allByModule = {};
+    for (const m of MODULES) allByModule[m] = 0;
+    for (const r of allTotalsRows) {
+      if (allByModule[r.module] !== undefined) allByModule[r.module] += r.seconds;
+    }
+    allByModule.story += storyAll;
+
+    // 近 7 日：按 (date, module) 分组
+    const sevenDaysAgo = this.db.prepare(`
+      SELECT module, date(recorded_at) AS date, COALESCE(SUM(seconds), 0) AS seconds
+      FROM kids_study_time_log
+      WHERE recorded_at >= datetime('now', '-7 days', 'localtime')
+      GROUP BY module, date(recorded_at)
+    `).all();
+
+    const sevenStoryRows = this.db.prepare(`
+      SELECT date(played_at) AS date, COALESCE(SUM(duration_seconds), 0) AS seconds
+      FROM kids_story_plays
+      WHERE played_at >= datetime('now', '-7 days', 'localtime')
+      GROUP BY date(played_at)
+    `).all();
+
+    // 构造近 7 天序列（含今天）
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const pad = n => String(n).padStart(2, '0');
+      const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const perModule = { literacy: 0, math: 0, english: 0, story: 0 };
+      for (const r of sevenDaysAgo) {
+        if (r.date === dateStr && perModule[r.module] !== undefined) perModule[r.module] += r.seconds;
+      }
+      for (const r of sevenStoryRows) {
+        if (r.date === dateStr) perModule.story += r.seconds;
+      }
+      days.push({ date: dateStr, perModule, total: perModule.literacy + perModule.math + perModule.english + perModule.story });
+    }
+
+    const sevenByModule = { literacy: 0, math: 0, english: 0, story: 0 };
+    for (const d of days) {
+      for (const m of MODULES) sevenByModule[m] += d.perModule[m];
+    }
+    const sevenTotal = sevenByModule.literacy + sevenByModule.math + sevenByModule.english + sevenByModule.story;
+    const allTotal = allByModule.literacy + allByModule.math + allByModule.english + allByModule.story;
+
+    return {
+      sevenTotal,
+      allTotal,
+      sevenByModule,
+      allByModule,
+      days
+    };
   }
 
   close() {

@@ -77,17 +77,29 @@
             <div class="kids-streak-label">连续打卡天数</div>
           </div>
         </div>
+
+        <!-- 学习统计入口 -->
+        <div class="kids-stats-entry" onclick="enterModule('stats-overview')">
+          <div class="kids-stats-entry-icon">📊</div>
+          <div class="kids-stats-entry-info">
+            <div class="kids-stats-entry-title">学习统计</div>
+            <div class="kids-stats-entry-desc">看看每个模块花了多少时间，水平如何</div>
+          </div>
+          <div class="kids-stats-entry-arrow">›</div>
+        </div>
       </section>
 
       <!-- ===== 识字子模块 ===== -->
 
       <!-- 识字 - 首页 -->
       <section id="view-home" class="kids-view">
-        <div class="kids-hero">
-          <div class="kids-hero-emoji">📚</div>
-          <h1 class="kids-hero-title">趣味识字</h1>
-          <p class="kids-hero-subtitle">每天认识新的字，变成小博士！</p>
-        </div>
+        <button class="kids-start-btn" id="startStudyBtn" onclick="startStudy()">
+          开始学习 🚀
+        </button>
+        <button class="kids-start-btn" id="manualStudyBtn" onclick="startStudy(true)" style="background:linear-gradient(135deg,var(--kids-purple),var(--kids-blue));box-shadow:0 8px 24px rgba(139,92,246,0.4);font-size:18px;padding:14px;display:none">
+          📝 手动生成学习卡片
+        </button>
+        <div class="kids-message" id="homeMessage" style="display:none"></div>
 
         <div class="kids-streak-card">
           <div class="kids-streak-fire">🔥</div>
@@ -122,14 +134,6 @@
         <div class="kids-stage-card" id="literacyStageCard"></div>
 
         <div class="kids-assessment-card" id="literacyAssessment"></div>
-
-        <button class="kids-start-btn" id="startStudyBtn" onclick="startStudy()">
-          开始学习 🚀
-        </button>
-        <button class="kids-start-btn" id="manualStudyBtn" onclick="startStudy(true)" style="background:linear-gradient(135deg,var(--kids-purple),var(--kids-blue));box-shadow:0 8px 24px rgba(139,92,246,0.4);font-size:18px;padding:14px;display:none">
-          📝 手动生成学习卡片
-        </button>
-        <div class="kids-message" id="homeMessage" style="display:none"></div>
       </section>
 
       <!-- 识字 - 字库 -->
@@ -200,16 +204,8 @@
 
       <!-- 算数 - 首页 -->
       <section id="view-math-home" class="kids-view">
-        <div class="kids-hero">
-          <div class="kids-hero-emoji">🔢</div>
-          <h1 class="kids-hero-title">趣味算数</h1>
-          <p class="kids-hero-subtitle">动动小脑筋，算数小天才！</p>
-        </div>
-
-        <div class="kids-stage-card" id="mathStageCard"></div>
-
         <div class="kids-progress-card">
-          <div class="kids-progress-title">🎮 选择难度</div>
+          <div class="kids-progress-title">🎮 选择难度，开始学习</div>
           <div class="kids-difficulty-grid" id="mathDifficultyGrid"></div>
         </div>
 
@@ -231,6 +227,8 @@
           </div>
         </div>
 
+        <div class="kids-stage-card" id="mathStageCard"></div>
+
         <div class="kids-assessment-card" id="mathAssessment"></div>
       </section>
 
@@ -243,16 +241,8 @@
 
       <!-- 英语 - 首页 -->
       <section id="view-english-home" class="kids-view">
-        <div class="kids-hero">
-          <div class="kids-hero-emoji">🔤</div>
-          <h1 class="kids-hero-title">英语基础</h1>
-          <p class="kids-hero-subtitle">认识字母和简单单词，Hello World！</p>
-        </div>
-
-        <div class="kids-stage-card" id="englishStageCard"></div>
-
         <div class="kids-progress-card">
-          <div class="kids-progress-title">📚 学习内容</div>
+          <div class="kids-progress-title">📚 选择内容，开始学习</div>
           <div class="kids-difficulty-grid" id="englishDifficultyGrid"></div>
         </div>
 
@@ -273,6 +263,8 @@
             </div>
           </div>
         </div>
+
+        <div class="kids-stage-card" id="englishStageCard"></div>
 
         <div class="kids-assessment-card" id="englishAssessment"></div>
       </section>
@@ -297,6 +289,42 @@
       <!-- 故事 - 阅读 -->
       <section id="view-story-read" class="kids-view">
         <div class="kids-story-reader" id="storyReader"></div>
+      </section>
+
+      <!-- ===== 学习统计总览 ===== -->
+      <section id="view-stats-overview" class="kids-view">
+        <div class="kids-overview-summary">
+          <div class="kids-overview-summary-card">
+            <div class="kids-overview-summary-emoji">⏱️</div>
+            <div class="kids-overview-summary-value" id="overview7dTotal">0 分</div>
+            <div class="kids-overview-summary-label">近 7 日总时长</div>
+          </div>
+          <div class="kids-overview-summary-card">
+            <div class="kids-overview-summary-emoji">📚</div>
+            <div class="kids-overview-summary-value" id="overviewAllTotal">0 分</div>
+            <div class="kids-overview-summary-label">全部累计</div>
+          </div>
+        </div>
+
+        <div class="kids-chart-card">
+          <div class="kids-chart-title">📅 近 7 日学习时长</div>
+          <div class="kids-stacked-chart" id="overviewDailyChart"></div>
+          <div class="kids-overview-legend" id="overviewLegend"></div>
+        </div>
+
+        <div class="kids-chart-card">
+          <div class="kids-chart-title">🏆 各模块时长对比</div>
+          <div class="kids-overview-tabs">
+            <button class="kids-overview-tab active" data-range="7d" onclick="switchOverviewRange('7d')">近 7 日</button>
+            <button class="kids-overview-tab" data-range="all" onclick="switchOverviewRange('all')">全部</button>
+          </div>
+          <div id="overviewModuleList"></div>
+        </div>
+
+        <div class="kids-chart-card">
+          <div class="kids-chart-title">🎯 各方向水平评估</div>
+          <div id="overviewAssessments"></div>
+        </div>
       </section>
 
     </main>

@@ -323,6 +323,7 @@ function switchView(view) {
   else if (view === 'math-home') loadMathHome();
   else if (view === 'english-home') loadEnglishHome();
   else if (view === 'story-home') loadStoryHome();
+  else if (view === 'stats-overview') loadStatsOverview();
 }
 
 function enterModule(mod) {
@@ -332,6 +333,7 @@ function enterModule(mod) {
   else if (mod === 'math') switchView('math-home');
   else if (mod === 'english') switchView('english-home');
   else if (mod === 'story') switchView('story-home');
+  else if (mod === 'stats-overview') switchView('stats-overview');
 }
 
 function goHub() {
@@ -361,6 +363,9 @@ function updateTabs(mod) {
     ],
     story: [
       { view:'story-home', icon:'📖', label:'故事' }
+    ],
+    'stats-overview': [
+      { view:'stats-overview', icon:'📊', label:'学习统计' }
     ]
   };
   const tabs = configs[mod] || [];
@@ -848,7 +853,195 @@ function showToast(msg) {
 // ===== 初始化 =====
 document.addEventListener('DOMContentLoaded', () => {
   switchView('hub');
+  startKidsStudyTimer();
 });
+
+// ============ 学习时长追踪（按子模块） ============
+// 仅在「子模块学习中」（识字/算数/英语 overlay 打开 或 故事阅读视图）且页面可见、
+// 最近 60s 有用户操作时计时。每 30s 把累计秒数提交一次；隐藏/卸载用 sendBeacon 兜底。
+// 故事时长由 reportStoryPlay 写入 kids_story_plays，所以这里跳过 story，避免重复计数。
+let kidsActiveTrackers = { literacy: 0, math: 0, english: 0 };
+let kidsLastActivityAt = Date.now();
+const KIDS_IDLE_MS = 60_000;
+const KIDS_FLUSH_INTERVAL_S = 30;
+
+function getCurrentLearningModule() {
+  if (document.visibilityState !== 'visible') return null;
+  if (Date.now() - kidsLastActivityAt > KIDS_IDLE_MS) return null;
+  const literacyOpen = document.getElementById('studyOverlay')?.classList.contains('active');
+  const mathOpen = document.getElementById('mathOverlay')?.classList.contains('active');
+  const engOpen = document.getElementById('englishOverlay')?.classList.contains('active');
+  if (literacyOpen) return 'literacy';
+  if (mathOpen) return 'math';
+  if (engOpen) return 'english';
+  return null;
+}
+
+function flushKidsStudyTime({ beacon = false } = {}) {
+  for (const mod of Object.keys(kidsActiveTrackers)) {
+    const seconds = kidsActiveTrackers[mod];
+    if (seconds <= 0) continue;
+    kidsActiveTrackers[mod] = 0;
+    const payload = JSON.stringify({ module: mod, seconds });
+    if (beacon && navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon('/api/kids/study-time', blob);
+    } else {
+      fetch('/api/kids/study-time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }
+  }
+}
+
+function startKidsStudyTimer() {
+  const bump = () => { kidsLastActivityAt = Date.now(); };
+  ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(ev => {
+    window.addEventListener(ev, bump, { passive: true });
+  });
+
+  setInterval(() => {
+    const mod = getCurrentLearningModule();
+    if (mod) {
+      kidsActiveTrackers[mod] += 1;
+      const total = kidsActiveTrackers.literacy + kidsActiveTrackers.math + kidsActiveTrackers.english;
+      if (total >= KIDS_FLUSH_INTERVAL_S) flushKidsStudyTime();
+    }
+  }, 1000);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushKidsStudyTime({ beacon: true });
+  });
+  window.addEventListener('pagehide', () => flushKidsStudyTime({ beacon: true }));
+}
+
+// ============ 学习统计总览 ============
+let overviewData = null;
+let overviewRange = '7d';
+
+const OVERVIEW_MODULES = [
+  { key: 'literacy', name: '识字', emoji: '📖', color: '#8b5cf6' },
+  { key: 'math',     name: '算数', emoji: '🔢', color: '#3b82f6' },
+  { key: 'english',  name: '英语', emoji: '🔤', color: '#f97316' },
+  { key: 'story',    name: '故事', emoji: '📚', color: '#ec4899' }
+];
+
+function fmtMin(seconds) {
+  const s = Math.max(0, Math.round(seconds || 0));
+  if (s < 60) return `${s} 秒`;
+  const m = Math.round(s / 60);
+  return `${m} 分`;
+}
+
+async function loadStatsOverview() {
+  try {
+    // 并发拉取：时长总览 + 识字 stats（用于水平评估）
+    const [overviewRes, literacyStats] = await Promise.all([
+      fetch('/api/kids/study-time/overview').then(r => r.json()),
+      fetch('/api/kids/stats').then(r => r.json())
+    ]);
+    overviewData = overviewRes;
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('overview7dTotal', fmtMin(overviewData.sevenTotal));
+    set('overviewAllTotal', fmtMin(overviewData.allTotal));
+
+    renderOverviewDailyChart();
+    renderOverviewLegend();
+    renderOverviewModuleList();
+    renderOverviewAssessments(literacyStats);
+  } catch (e) {
+    console.error('加载学习统计失败:', e);
+  }
+}
+
+function renderOverviewDailyChart() {
+  const el = document.getElementById('overviewDailyChart');
+  if (!el || !overviewData) return;
+  const days = overviewData.days || [];
+  const maxSec = Math.max(1, ...days.map(d => d.total));
+
+  el.innerHTML = days.map(d => {
+    const heightPct = (d.total / maxSec) * 100;
+    const segs = OVERVIEW_MODULES.map(m => {
+      const sec = d.perModule[m.key] || 0;
+      if (sec === 0) return '';
+      const ratio = sec / d.total;
+      return `<div class="kids-stacked-seg" style="height:${ratio * 100}%; background:${m.color}" title="${m.name}: ${fmtMin(sec)}"></div>`;
+    }).join('');
+    const dateLabel = d.date.slice(5).replace('-', '/');
+    const totalLabel = d.total > 0 ? fmtMin(d.total) : '';
+    return `
+      <div class="kids-stacked-item">
+        <div class="kids-stacked-value">${totalLabel}</div>
+        <div class="kids-stacked-bar-wrap">
+          <div class="kids-stacked-bar" style="height:${Math.max(heightPct, d.total > 0 ? 4 : 0)}%">${segs}</div>
+        </div>
+        <div class="kids-stacked-label">${dateLabel}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderOverviewLegend() {
+  const el = document.getElementById('overviewLegend');
+  if (!el) return;
+  el.innerHTML = OVERVIEW_MODULES.map(m =>
+    `<span class="kids-overview-legend-item"><span class="kids-overview-legend-dot" style="background:${m.color}"></span>${m.emoji} ${m.name}</span>`
+  ).join('');
+}
+
+function switchOverviewRange(range) {
+  overviewRange = range;
+  document.querySelectorAll('.kids-overview-tab').forEach(t => t.classList.remove('active'));
+  const active = document.querySelector(`.kids-overview-tab[data-range="${range}"]`);
+  if (active) active.classList.add('active');
+  renderOverviewModuleList();
+}
+
+function renderOverviewModuleList() {
+  const el = document.getElementById('overviewModuleList');
+  if (!el || !overviewData) return;
+  const data = overviewRange === '7d' ? overviewData.sevenByModule : overviewData.allByModule;
+  const max = Math.max(1, ...OVERVIEW_MODULES.map(m => data[m.key] || 0));
+  const total = OVERVIEW_MODULES.reduce((sum, m) => sum + (data[m.key] || 0), 0);
+
+  el.innerHTML = OVERVIEW_MODULES.map(m => {
+    const sec = data[m.key] || 0;
+    const pct = total > 0 ? Math.round(sec / total * 100) : 0;
+    const widthPct = (sec / max) * 100;
+    return `
+      <div class="kids-overview-row">
+        <div class="kids-overview-row-name">${m.emoji} ${m.name}</div>
+        <div class="kids-overview-row-bar-wrap">
+          <div class="kids-overview-row-bar" style="width:${widthPct}%; background:${m.color}"></div>
+        </div>
+        <div class="kids-overview-row-text">${fmtMin(sec)} <span class="kids-overview-row-pct">(${pct}%)</span></div>
+      </div>`;
+  }).join('');
+}
+
+function renderOverviewAssessments(literacyStats) {
+  const el = document.getElementById('overviewAssessments');
+  if (!el) return;
+  const items = [
+    { name: '📖 识字', evalResult: evalLiteracy(literacyStats || {}) },
+    { name: '🔢 算数', evalResult: evalMath(getMathStats()) },
+    { name: '🔤 英语', evalResult: evalEnglish(getEngStats()) }
+  ];
+  el.innerHTML = items.map(it => {
+    const { level, grade, color, statsLine } = it.evalResult;
+    return `
+      <div class="kids-overview-eval-card" style="background:linear-gradient(135deg, ${color}, ${color}cc)">
+        <div class="kids-overview-eval-name">${it.name}</div>
+        <div class="kids-overview-eval-grade">${grade}</div>
+        <div class="kids-overview-eval-stars">${starsForLevel(level)}</div>
+        <div class="kids-overview-eval-stats">${statsLine}</div>
+      </div>`;
+  }).join('');
+}
 
 // ============ 算数模块 ============
 let mathState = { questions:[], index:0, correct:0, difficulty:'easy' };
