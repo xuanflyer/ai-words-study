@@ -395,11 +395,10 @@ class VocabDB {
       }));
   }
 
-  // 智能批次：按 dueRatio 比例 + 交错排版
-  generateSmartBatch(size = 10, { dueRatio = 0.7 } = {}) {
-    const dueTarget = Math.ceil(size * dueRatio);
-    const dueCandidates = this.getSmartReviewCandidates(size);
-    const dueSelected = dueCandidates.slice(0, Math.min(dueTarget, size));
+  // 智能批次：先用当日艾宾浩斯复习列表（next_review_at <= now）填满，
+  // 复习列表为空或不足才补新词。
+  generateSmartBatch(size = 10) {
+    const dueSelected = this.getDueWords(size);
 
     const newSlots = size - dueSelected.length;
     const newSelected = newSlots > 0 ? this.getNewWords(newSlots) : [];
