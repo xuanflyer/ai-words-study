@@ -488,8 +488,10 @@ app.post('/api/kids/stories/:id/summaries', (req, res) => {
   req.on('end', () => {
     const buf = Buffer.concat(chunks);
     if (buf.length < 100) return res.status(400).json({ error: '录音内容为空' });
+    const ct = req.headers['content-type'] || 'audio/webm';
+    const ext = ct.includes('mp4') ? 'mp4' : ct.includes('ogg') ? 'ogg' : 'webm';
     const ts = Date.now();
-    const filename = `${storyId}_${ts}.webm`;
+    const filename = `${storyId}_${ts}.${ext}`;
     const filepath = path.join(SUMMARIES_DIR, filename);
     fs.writeFile(filepath, buf, err => {
       if (err) {
@@ -509,11 +511,11 @@ app.get('/api/kids/stories/:id/summaries', (req, res) => {
   let files;
   try {
     files = fs.readdirSync(SUMMARIES_DIR)
-      .filter(f => f.startsWith(storyId + '_') && f.endsWith('.webm'))
+      .filter(f => f.startsWith(storyId + '_') && /\.(webm|mp4|ogg)$/.test(f))
       .sort()
       .reverse()
       .map(f => {
-        const ts = parseInt(f.replace(`${storyId}_`, '').replace('.webm', '')) || 0;
+        const ts = parseInt(f.replace(`${storyId}_`, '').replace(/\.(webm|mp4|ogg)$/, '')) || 0;
         return { filename: f, url: `/audio/summaries/${f}`, created_at: ts };
       });
   } catch {

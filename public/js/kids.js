@@ -1618,6 +1618,7 @@ window.addEventListener('beforeunload', () => {
 // ============ 故事语音总结录音 ============
 let _mediaRecorder = null;
 let _recordChunks = [];
+let _recordMimeType = '';
 let _recordTimerInterval = null;
 let _recordSec = 0;
 
@@ -1634,7 +1635,9 @@ async function startStoryRecord() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     _recordChunks = [];
     _recordSec = 0;
-    _mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+    _recordMimeType = mimeType;
+    _mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _recordChunks.push(e.data); };
     _mediaRecorder.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
@@ -1676,14 +1679,15 @@ function stopStoryRecord() {
 
 async function uploadStoryRecording() {
   if (_recordChunks.length === 0) return;
-  const blob = new Blob(_recordChunks, { type: 'audio/webm' });
+  const ct = _recordMimeType || 'audio/webm';
+  const blob = new Blob(_recordChunks, { type: ct });
   _recordChunks = [];
 
   showToast('正在保存录音...');
   try {
     const res = await fetch('/api/kids/stories/global/summaries', {
       method: 'POST',
-      headers: { 'Content-Type': 'audio/webm' },
+      headers: { 'Content-Type': ct },
       body: blob
     });
     if (res.ok) {
