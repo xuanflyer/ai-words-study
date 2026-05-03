@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const cron = require('node-cron');
 const { VocabDB, REVIEW_INTERVALS, KIDS_REVIEW_INTERVALS } = require('./db');
 const logger = require('./logger');
@@ -469,6 +470,54 @@ app.post('/api/kids/stories/:id/plays', (req, res) => {
   const result = db.recordStoryPlay(req.params.id, duration);
   logger.info('故事播放已记录', { storyId: req.params.id, duration: result.duration_seconds });
   res.status(201).json({ success: true, ...result });
+});
+
+// 故事语音总结 — 上传录音
+const SUMMARIES_DIR = path.join(__dirname, 'public', 'audio', 'summaries');
+fs.mkdirSync(SUMMARIES_DIR, { recursive: true });
+
+app.post('/api/kids/stories/:id/summaries', (req, res) => {
+  const storyId = req.params.id;
+  const story = (storiesData.stories || []).find(s => s.id === storyId);
+  if (!story) return res.status(404).json({ error: '未找到故事' });
+
+  const chunks = [];
+  req.on('data', chunk => chunks.push(chunk));
+  req.on('end', () => {
+    const buf = Buffer.concat(chunks);
+    if (buf.length < 100) return res.status(400).json({ error: '录音内容为空' });
+    const ts = Date.now();
+    const filename = `${storyId}_${ts}.webm`;
+    const filepath = path.join(SUMMARIES_DIR, filename);
+    fs.writeFile(filepath, buf, err => {
+      if (err) {
+        logger.error('保存录音失败', { err: err.message });
+        return res.status(500).json({ error: '保存失败' });
+      }
+      logger.info('故事语音总结已保存', { storyId, filename });
+      res.status(201).json({ success: true, filename, url: `/audio/summaries/${filename}`, created_at: ts });
+    });
+  });
+  req.on('error', () => res.status(500).json({ error: '上传失败' }));
+});
+
+// 故事语音总结 — 列表
+app.get('/api/kids/stories/:id/summaries', (req, res) => {
+  const storyId = req.params.id;
+  let files;
+  try {
+    files = fs.readdirSync(SUMMARIES_DIR)
+      .filter(f => f.startsWith(storyId + '_') && f.endsWith('.webm'))
+      .sort()
+      .reverse()
+      .map(f => {
+        const ts = parseInt(f.replace(`${storyId}_`, '').replace('.webm', '')) || 0;
+        return { filename: f, url: `/audio/summaries/${f}`, created_at: ts };
+      });
+  } catch {
+    files = [];
+  }
+  res.json({ summaries: files });
 });
 
 // SPA fallback

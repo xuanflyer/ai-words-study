@@ -1311,6 +1311,70 @@ function showEnglishComplete() {
 // ============ 故事模块 ============
 let storyState = { story:null, paraIndex:0, playing:false, rate:0.85, startedAt:0, reported:false };
 
+// 故事5分钟限时计时器
+const STORY_MAX_MS = 5 * 60 * 1000; // 5分钟
+let _storyLimitTimer = null;
+let _storyLockTimer = null;  // 锁定期5分钟解锁倒计时
+let _storyLockRemain = 0;
+
+function startStoryLimitTimer() {
+  clearTimeout(_storyLimitTimer);
+  _storyLimitTimer = setTimeout(() => {
+    triggerStoryLock();
+  }, STORY_MAX_MS);
+}
+
+function clearStoryLimitTimer() {
+  clearTimeout(_storyLimitTimer);
+  _storyLimitTimer = null;
+}
+
+function triggerStoryLock() {
+  // 停止播放
+  if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  storyState.playing = false;
+  renderStoryReader();
+
+  // 语音提示
+  speak('小朋友，你已经听故事超过5分钟了，休息一下眼睛吧！', 0.85);
+
+  // 显示锁定浮层
+  const overlay = document.getElementById('storyLockOverlay');
+  if (overlay) overlay.classList.add('active');
+
+  // 加载已有录音
+  if (storyState.story) loadStorySummaries(storyState.story.id);
+
+  // 5分钟解锁倒计时
+  _storyLockRemain = 5 * 60;
+  updateLockCountdown();
+  clearInterval(_storyLockTimer);
+  _storyLockTimer = setInterval(() => {
+    _storyLockRemain--;
+    updateLockCountdown();
+    if (_storyLockRemain <= 0) {
+      clearInterval(_storyLockTimer);
+      unlockStory();
+    }
+  }, 1000);
+}
+
+function updateLockCountdown() {
+  const el = document.getElementById('storyLockCountdown');
+  if (!el) return;
+  const m = Math.floor(_storyLockRemain / 60);
+  const s = _storyLockRemain % 60;
+  el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function unlockStory() {
+  const overlay = document.getElementById('storyLockOverlay');
+  if (overlay) overlay.classList.remove('active');
+  speak('好了，可以继续听故事啦！', 0.85);
+  startStoryLimitTimer(); // 重新计时
+}
+
 function formatDuration(sec) {
   sec = Math.max(0, Math.round(sec || 0));
   if (sec < 60) return `${sec} 秒`;
@@ -1362,6 +1426,7 @@ async function openStory(id) {
     storyState = { story, paraIndex:0, playing:false, rate:0.85, startedAt: Date.now(), reported: false };
     switchView('story-read');
     renderStoryReader();
+    startStoryLimitTimer();
   } catch (e) {
     console.error('打开故事失败:', e);
     showToast('网络错误');
@@ -1528,6 +1593,12 @@ function exitStory() {
   if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
   window.speechSynthesis && window.speechSynthesis.cancel();
   reportStoryPlay();
+  clearStoryLimitTimer();
+  clearInterval(_storyLockTimer);
+  // 关闭锁定浮层（如有）
+  const overlay = document.getElementById('storyLockOverlay');
+  if (overlay) overlay.classList.remove('active');
+  stopStoryRecord();
   storyState = { story:null, paraIndex:0, playing:false, rate:0.85, startedAt:0, reported:false };
   switchView('story-home');
 }
@@ -1539,3 +1610,129 @@ window.addEventListener('pagehide', () => {
 window.addEventListener('beforeunload', () => {
   if (storyState && storyState.story) reportStoryPlay();
 });
+
+// ============ 故事语音总结录音 ============
+let _mediaRecorder = null;
+let _recordChunks = [];
+let _recordTimerInterval = null;
+let _recordSec = 0;
+
+async function toggleStoryRecord() {
+  if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+    _mediaRecorder.stop();
+  } else {
+    await startStoryRecord();
+  }
+}
+
+async function startStoryRecord() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _recordChunks = [];
+    _recordSec = 0;
+    _mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _recordChunks.push(e.data); };
+    _mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      clearInterval(_recordTimerInterval);
+      const btn = document.getElementById('storyRecordBtn');
+      const timerEl = document.getElementById('storyRecordTimer');
+      if (btn) { btn.classList.remove('recording'); document.getElementById('storyRecordLabel').textContent = '开始录音'; }
+      if (timerEl) timerEl.style.display = 'none';
+      uploadStoryRecording();
+    };
+    _mediaRecorder.start();
+
+    // 更新 UI
+    const btn = document.getElementById('storyRecordBtn');
+    const timerEl = document.getElementById('storyRecordTimer');
+    if (btn) { btn.classList.add('recording'); document.getElementById('storyRecordLabel').textContent = '停止录音'; }
+    if (timerEl) timerEl.style.display = 'block';
+
+    _recordTimerInterval = setInterval(() => {
+      _recordSec++;
+      const secEl = document.getElementById('storyRecordSec');
+      if (secEl) secEl.textContent = _recordSec;
+      // 最长录音60秒自动停止
+      if (_recordSec >= 60 && _mediaRecorder && _mediaRecorder.state === 'recording') {
+        _mediaRecorder.stop();
+      }
+    }, 1000);
+  } catch (e) {
+    showToast('无法访问麦克风，请检查权限设置');
+  }
+}
+
+function stopStoryRecord() {
+  if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+    _mediaRecorder.stop();
+  }
+  clearInterval(_recordTimerInterval);
+}
+
+async function uploadStoryRecording() {
+  if (_recordChunks.length === 0) return;
+  const storyId = storyState.story && storyState.story.id;
+  if (!storyId) return;
+
+  const blob = new Blob(_recordChunks, { type: 'audio/webm' });
+  _recordChunks = [];
+
+  showToast('正在保存录音...');
+  try {
+    const res = await fetch(`/api/kids/stories/${storyId}/summaries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'audio/webm' },
+      body: blob
+    });
+    if (res.ok) {
+      showToast('录音保存成功！');
+      loadStorySummaries(storyId);
+    } else {
+      showToast('保存失败，请重试');
+    }
+  } catch (e) {
+    showToast('网络错误，保存失败');
+  }
+}
+
+async function loadStorySummaries(storyId) {
+  const list = document.getElementById('storySummariesList');
+  if (!list) return;
+  try {
+    const res = await fetch(`/api/kids/stories/${storyId}/summaries`).then(r => r.json());
+    const summaries = res.summaries || [];
+    if (summaries.length === 0) {
+      list.innerHTML = '<div style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0;">还没有录音，录一个试试吧！</div>';
+      return;
+    }
+    list.innerHTML = summaries.map((s, i) => {
+      const d = new Date(s.created_at);
+      const dateStr = `${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+      return `
+        <div class="story-summary-item">
+          <div class="story-summary-item-icon">🎤</div>
+          <div class="story-summary-item-info">
+            <div class="story-summary-item-label">第 ${summaries.length - i} 次总结</div>
+            <div class="story-summary-item-date">${dateStr}</div>
+          </div>
+          <button class="story-summary-play-btn" onclick="playStorySummary('${s.url}', this)" title="播放">▶</button>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = '<div style="font-size:13px;color:#94a3b8;text-align:center;">加载失败</div>';
+  }
+}
+
+let _summaryAudio = null;
+function playStorySummary(url, btn) {
+  if (_summaryAudio) { _summaryAudio.pause(); _summaryAudio = null; }
+  // 重置所有播放按钮
+  document.querySelectorAll('.story-summary-play-btn').forEach(b => b.textContent = '▶');
+
+  _summaryAudio = new Audio(url);
+  _summaryAudio.onended = () => { btn.textContent = '▶'; _summaryAudio = null; };
+  _summaryAudio.play().then(() => { btn.textContent = '⏹'; }).catch(() => showToast('播放失败'));
+}
+

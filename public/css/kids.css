@@ -1782,3 +1782,117 @@ body {
 @media (min-width: 600px) {
   .kids-main { padding: 24px 32px 100px; }
 }
+
+/* ============ 故事锁定浮层 ============ */
+.story-lock-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+.story-lock-overlay.active { display: flex; }
+
+.story-lock-card {
+  background: #fff;
+  border-radius: 28px;
+  padding: 32px 24px 28px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+.story-lock-emoji { font-size: 64px; margin-bottom: 8px; }
+.story-lock-title { font-size: 26px; font-weight: 900; color: #1e293b; margin-bottom: 6px; }
+.story-lock-tip { font-size: 15px; color: #64748b; margin-bottom: 20px; }
+
+.story-lock-countdown {
+  font-size: 52px;
+  font-weight: 900;
+  color: #8b5cf6;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+.story-lock-subtitle { font-size: 14px; color: #94a3b8; margin-top: 4px; margin-bottom: 24px; }
+
+/* 总结区 */
+.story-summary-section {
+  background: #f8fafc;
+  border-radius: 18px;
+  padding: 20px 16px;
+  margin-top: 4px;
+}
+.story-summary-title { font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+.story-summary-desc { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+
+/* 录音按钮 */
+.story-record-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 14px 28px;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--kids-font);
+  cursor: pointer;
+  width: 100%;
+  box-shadow: 0 6px 20px rgba(139,92,246,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  margin-bottom: 10px;
+}
+.story-record-btn:active { transform: scale(0.97); }
+.story-record-btn.recording {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  box-shadow: 0 6px 20px rgba(239,68,68,0.4);
+  animation: pulse-record 1.2s infinite;
+}
+@keyframes pulse-record {
+  0%,100% { box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
+  50% { box-shadow: 0 6px 30px rgba(239,68,68,0.7); }
+}
+.story-record-icon { font-size: 22px; }
+.story-record-timer { font-size: 14px; color: #ef4444; font-weight: 700; margin-bottom: 12px; }
+
+/* 录音列表 */
+.story-summaries-list { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.story-summary-item {
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+.story-summary-item-icon { font-size: 26px; }
+.story-summary-item-info { flex: 1; text-align: left; }
+.story-summary-item-date { font-size: 12px; color: #94a3b8; }
+.story-summary-item-label { font-size: 14px; font-weight: 700; color: #1e293b; }
+.story-summary-play-btn {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(59,130,246,0.4);
+}
+.story-summary-play-btn:active { transform: scale(0.93); }
+
