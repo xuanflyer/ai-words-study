@@ -323,6 +323,7 @@ function switchView(view) {
   else if (view === 'math-home') loadMathHome();
   else if (view === 'english-home') loadEnglishHome();
   else if (view === 'story-home') loadStoryHome();
+  else if (view === 'story-summary') loadStorySummaries('global');
   else if (view === 'stats-overview') loadStatsOverview();
 }
 
@@ -369,7 +370,8 @@ function updateTabs(mod) {
       { view:'english-home', icon:'🏠', label:'英语' }
     ],
     story: [
-      { view:'story-home', icon:'📖', label:'故事' }
+      { view:'story-home', icon:'📖', label:'故事' },
+      { view:'story-summary', icon:'🎤', label:'总结' }
     ],
     'stats-overview': [
       { view:'stats-overview', icon:'📊', label:'学习统计' }
@@ -1420,8 +1422,6 @@ async function loadStoryHome() {
     console.error('加载故事失败:', e);
     grid.innerHTML = '<div class="kids-message">加载失败，请重试</div>';
   }
-
-  loadStorySummaries('global');
 }
 
 async function openStory(id) {
