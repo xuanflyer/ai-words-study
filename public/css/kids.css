@@ -644,8 +644,33 @@ body {
   margin-top: 8px;
 }
 
-/* 配图区域 */
-.kids-images {
+/* 书写动画区域 */
+.kids-stroke-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.kids-stroke-canvas {
+  cursor: pointer;
+  border-radius: 16px;
+  background: #f8f7ff;
+  border: 2px solid #e2e8f0;
+  transition: box-shadow 0.2s;
+}
+
+.kids-stroke-canvas:hover {
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);
+}
+
+.kids-stroke-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+
   display: flex;
   gap: 12px;
   width: 100%;
@@ -1896,4 +1921,72 @@ body {
   box-shadow: 0 3px 10px rgba(59,130,246,0.4);
 }
 .story-summary-play-btn:active { transform: scale(0.93); }
+
+/* ===== 认识数字模块 ===== */
+.num-card-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+.num-card-top {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.num-big-digit {
+  font-size: 100px;
+  font-weight: 900;
+  line-height: 1;
+  color: #8b5cf6;
+  text-shadow: 0 4px 16px rgba(139,92,246,0.3);
+  min-width: 80px;
+  text-align: center;
+}
+.num-stroke-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.digit-anim-svg {
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
+  transition: box-shadow 0.2s;
+}
+.num-stroke-wrap:hover .digit-anim-svg,
+.letter-stroke-wrap:hover .digit-anim-svg {
+  box-shadow: 0 4px 16px rgba(139,92,246,0.25);
+}
+.letter-anim-svg {
+  width: 100px;
+  height: 100px;
+}
+.letter-stroke-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  margin: 8px 0 4px;
+}
+.num-stroke-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+.num-info {
+  text-align: center;
+}
+.num-zh {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1e293b;
+}
+.num-things {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+}
 

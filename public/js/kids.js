@@ -100,21 +100,24 @@ function evalLiteracy(stats) {
 
 // 算数：按难度分别评估
 function evalMath(stats) {
+  const n = stats.numbers || {total:0,correct:0};
   const e = stats.easy || {total:0,correct:0};
   const m = stats.medium || {total:0,correct:0};
   const h = stats.hard || {total:0,correct:0};
   const accOf = (s) => s.total > 0 ? Math.round(s.correct/s.total*100) : 0;
-  const ae = accOf(e), am = accOf(m), ah = accOf(h);
+  const an = accOf(n), ae = accOf(e), am = accOf(m), ah = accOf(h);
 
   let level, grade, color;
   if (h.total >= 30 && ah >= 80) { level = 4; grade = '小学二年级（100以内加减）'; color = '#3b82f6'; }
   else if (m.total >= 30 && am >= 80) { level = 3; grade = '小学一年级（20以内加减）'; color = '#22c55e'; }
   else if (e.total >= 20 && ae >= 80) { level = 2; grade = '学前/幼儿园（10以内加减）'; color = '#f59e0b'; }
-  else if (e.total >= 5)              { level = 1; grade = '启蒙阶段'; color = '#f97316'; }
+  else if (n.total >= 10)             { level = 1; grade = '启蒙阶段（认识数字）'; color = '#f97316'; }
   else                                { level = 0; grade = '准备阶段'; color = '#ec4899'; }
 
   const tips = [];
-  if (e.total < 20) tips.push('从"简单"难度开始，先把 10 以内加减练熟');
+  if (n.total < 20) tips.push('先认识 0-9 数字，打好基础');
+  else if (an < 80) tips.push(`数字认识正确率 ${an}%，再练习几遍加深印象`);
+  else if (e.total < 20) tips.push('从"简单"难度开始，先把 10 以内加减练熟');
   else if (ae < 80) tips.push(`简单题正确率 ${ae}%，再练几轮巩固熟练度`);
   else if (m.total < 20) tips.push('挑战"中等"难度，进入 20 以内加减带进退位');
   else if (am < 80) tips.push(`中等题正确率 ${am}%，重点练进位/退位`);
@@ -124,7 +127,7 @@ function evalMath(stats) {
     tips.push('准备进入乘法表和简单除法');
     tips.push('多用生活中的数字（购物、时间）解决问题');
   }
-  const statsLine = `简单 ${e.correct}/${e.total} · 中等 ${m.correct}/${m.total} · 挑战 ${h.correct}/${h.total}`;
+  const statsLine = `数字 ${n.correct}/${n.total} · 简单 ${e.correct}/${e.total} · 中等 ${m.correct}/${m.total} · 挑战 ${h.correct}/${h.total}`;
   return { level, grade, color, tips, statsLine };
 }
 
@@ -488,6 +491,40 @@ async function startStudy(force = false) {
   }
 }
 
+// ===== 汉字书写动画 =====
+let _hanziWriter = null;
+
+function initHanziWriter(char) {
+  const target = document.getElementById('hanziWriterTarget');
+  if (!target || typeof HanziWriter === 'undefined') return;
+
+  _hanziWriter = HanziWriter.create(target, char, {
+    width: 200,
+    height: 200,
+    padding: 10,
+    strokeColor: '#8b5cf6',
+    radicalColor: '#ec4899',
+    outlineColor: '#e2e8f0',
+    drawingColor: '#f97316',
+    strokeAnimationSpeed: 0.5,   // 较慢速度
+    delayBetweenStrokes: 400,
+    showCharacter: false,
+    showOutline: true,
+    onLoadCharDataSuccess: () => {
+      _hanziWriter.animateCharacter();
+    },
+    onLoadCharDataError: () => {
+      if (target) target.style.display = 'none';
+      const hint = target?.nextElementSibling;
+      if (hint) hint.style.display = 'none';
+    }
+  });
+
+  target.onclick = () => {
+    if (_hanziWriter) _hanziWriter.animateCharacter();
+  };
+}
+
 // ===== 学习界面 =====
 function showStudyOverlay() {
   const overlay = document.getElementById('studyOverlay');
@@ -541,6 +578,10 @@ function renderStudyCard(opts) {
       <div class="kids-char-main" onclick="speak('${char.char}')" title="点击听读音">${char.char}</div>
       <div class="kids-char-pinyin">${char.pinyin}</div>
       ${char.isNew ? '<span class="kids-char-new-badge">✨ 新字</span>' : ''}
+      <div class="kids-stroke-wrap">
+        <div id="hanziWriterTarget" class="kids-stroke-canvas"></div>
+        <div class="kids-stroke-hint">点击重新书写 ✏️</div>
+      </div>
     </div>
     <div class="kids-images">
       ${images.map(img => `
@@ -577,6 +618,9 @@ function renderStudyCard(opts) {
   if (!skipAutoSpeak) {
     setTimeout(() => speak(char.char), 500);
   }
+
+  // 书写动画
+  initHanziWriter(char.char);
 }
 
 // ===== 复习操作 =====
@@ -1059,9 +1103,10 @@ function getMathStats() {
   const raw = JSON.parse(localStorage.getItem('kids_math_stats') || '{}');
   // 兼容旧格式 {total, correct} -> 全部归入 easy
   if (raw.total !== undefined && raw.easy === undefined) {
-    return { easy: {total: raw.total||0, correct: raw.correct||0}, medium:{total:0,correct:0}, hard:{total:0,correct:0} };
+    return { numbers:{total:0,correct:0}, easy: {total: raw.total||0, correct: raw.correct||0}, medium:{total:0,correct:0}, hard:{total:0,correct:0} };
   }
   return {
+    numbers: raw.numbers || {total:0,correct:0},
     easy: raw.easy || {total:0,correct:0},
     medium: raw.medium || {total:0,correct:0},
     hard: raw.hard || {total:0,correct:0}
@@ -1076,13 +1121,14 @@ function saveMathStats(diff, correct) {
 }
 function getMathTotals() {
   const s = getMathStats();
-  const total = s.easy.total + s.medium.total + s.hard.total;
-  const correct = s.easy.correct + s.medium.correct + s.hard.correct;
+  const total = s.numbers.total + s.easy.total + s.medium.total + s.hard.total;
+  const correct = s.numbers.correct + s.easy.correct + s.medium.correct + s.hard.correct;
   return { total, correct };
 }
 
 // 算数阶段定义：阶段顺序 + 解锁阈值（题数）。正确率统一 80%。
 const MATH_STAGES = [
+  { key: 'numbers', label: '认识数字', emoji: '🔢', desc: '认识 0-9 数字', threshold: 20 },
   { key: 'easy',   label: '简单', emoji: '🌟', desc: '10以内加减',  threshold: 20 },
   { key: 'medium', label: '中等', emoji: '⭐', desc: '20以内加减',  threshold: 30 },
   { key: 'hard',   label: '挑战', emoji: '🌠', desc: '100以内加减', threshold: 30 }
@@ -1116,7 +1162,234 @@ function generateMathQ(diff) {
   return { text:`${a} ${op} ${b} = ?`, answer };
 }
 
+// ===== 认识数字子模块 =====
+const NUMBER_DATA = [
+  { digit: 0, zh: '零', emoji: '🌕', things: '什么都没有' },
+  { digit: 1, zh: '一', emoji: '☝️', things: '一个手指' },
+  { digit: 2, zh: '二', emoji: '✌️', things: '两只眼睛' },
+  { digit: 3, zh: '三', emoji: '🌟', things: '三角形' },
+  { digit: 4, zh: '四', emoji: '🍀', things: '四片叶子' },
+  { digit: 5, zh: '五', emoji: '✋', things: '五个手指' },
+  { digit: 6, zh: '六', emoji: '🎲', things: '六个面' },
+  { digit: 7, zh: '七', emoji: '🌈', things: '七种颜色' },
+  { digit: 8, zh: '八', emoji: '🐙', things: '八条腿' },
+  { digit: 9, zh: '九', emoji: '🐱', things: '九条命' }
+];
+
+// 每个数字/字母可以有多笔，每个元素是一条 SVG path d 字符串，viewBox 0 0 100 100
+// 笔画顺序和方向遵循标准书写教学规范
+const DIGIT_STROKES = {
+  0: ["M50 15 Q75 15 80 50 Q80 85 50 88 Q20 85 20 50 Q20 15 50 15"],
+  1: ["M35 25 L50 15 L50 88", "M35 88 L65 88"],
+  2: ["M25 30 Q25 15 50 15 Q75 15 75 32 Q75 50 50 60 Q30 72 20 88 L80 88"],
+  3: ["M25 20 Q50 10 70 25 Q80 38 55 50", "M55 50 Q80 60 72 78 Q62 92 35 88"],
+  4: ["M65 15 L15 62 L82 62", "M65 15 L65 88"],
+  5: ["M72 15 L28 15", "M28 15 L25 48 Q45 40 62 48 Q82 58 75 78 Q68 92 40 88"],
+  6: ["M65 18 Q50 10 35 25 Q18 45 18 60 Q18 88 50 88 Q80 88 80 65 Q80 45 50 45 Q25 45 20 60"],
+  7: ["M20 15 L80 15 L45 88"],
+  8: ["M50 50 Q25 38 30 25 Q35 10 50 12 Q65 10 70 25 Q75 38 50 50", "M50 50 Q20 62 22 78 Q25 92 50 90 Q75 92 78 78 Q80 62 50 50"],
+  9: ["M80 42 Q80 58 50 58 Q20 58 20 38 Q20 15 50 15 Q80 15 80 42 L75 85"]
+};
+
+// 字母笔画：遵循英文书写教学标准笔顺（从上到下、从左到右）
+const LETTER_STROKES = {
+  A: ["M10 90 L50 10 L90 90", "M28 58 L72 58"],
+  B: ["M20 10 L20 90", "M20 10 L55 10 Q78 10 78 30 Q78 50 55 50 L20 50", "M20 50 L58 50 Q82 50 82 70 Q82 90 58 90 L20 90"],
+  C: ["M80 25 Q50 8 25 25 Q10 42 10 55 Q10 72 25 85 Q50 98 80 80"],
+  D: ["M20 10 L20 90", "M20 10 L45 10 Q82 10 82 50 Q82 90 45 90 L20 90"],
+  E: ["M75 10 L20 10", "M20 10 L20 90", "M20 50 L60 50", "M20 90 L75 90"],
+  F: ["M75 10 L20 10", "M20 10 L20 90", "M20 50 L60 50"],
+  G: ["M78 25 Q50 8 25 25 Q10 42 10 55 Q10 72 25 85 Q50 98 78 80", "M78 80 L78 55 L55 55"],
+  H: ["M20 10 L20 90", "M80 10 L80 90", "M20 50 L80 50"],
+  I: ["M30 10 L70 10", "M50 10 L50 90", "M30 90 L70 90"],
+  J: ["M30 10 L75 10", "M60 10 L60 72 Q60 90 42 90 Q25 90 22 75"],
+  K: ["M20 10 L20 90", "M75 10 L20 55", "M20 55 L75 90"],
+  L: ["M20 10 L20 90", "M20 90 L78 90"],
+  M: ["M10 90 L10 10", "M10 10 L50 55", "M50 55 L90 10", "M90 10 L90 90"],
+  N: ["M20 90 L20 10", "M20 10 L80 90", "M80 90 L80 10"],
+  O: ["M50 10 Q82 10 82 50 Q82 90 50 90 Q18 90 18 50 Q18 10 50 10"],
+  P: ["M20 90 L20 10", "M20 10 L55 10 Q80 10 80 30 Q80 50 55 50 L20 50"],
+  Q: ["M50 10 Q82 10 82 50 Q82 90 50 90 Q18 90 18 50 Q18 10 50 10", "M62 72 L88 95"],
+  R: ["M20 90 L20 10", "M20 10 L55 10 Q80 10 80 30 Q80 50 55 50 L20 50", "M50 50 L82 90"],
+  S: ["M72 22 Q55 8 38 15 Q18 22 18 38 Q18 50 50 55 Q82 60 82 75 Q82 92 55 92 Q38 92 22 80"],
+  T: ["M10 10 L90 10", "M50 10 L50 90"],
+  U: ["M20 10 L20 70 Q20 90 50 90 Q80 90 80 70 L80 10"],
+  V: ["M10 10 L50 90", "M50 90 L90 10"],
+  W: ["M5 10 L28 90", "M28 90 L50 35", "M50 35 L72 90", "M72 90 L95 10"],
+  X: ["M15 10 L85 90", "M85 10 L15 90"],
+  Y: ["M15 10 L50 50", "M85 10 L50 50", "M50 50 L50 90"],
+  Z: ["M15 10 L85 10", "M85 10 L15 90", "M15 90 L85 90"]
+};
+
+// 兼容旧代码：DIGIT_PATHS 已废弃，统一使用 DIGIT_STROKES
+const DIGIT_PATHS = Object.fromEntries(
+  Object.entries(DIGIT_STROKES).map(([k, v]) => [k, v.join(' ')])
+);
+
+let _numAnimFrame = null;
+let _numAnimStrokeIdx = 0;
+
+// 通用多笔画动画：strokes 是路径字符串数组，svgEl 里每笔对应一个 .stroke-path-N
+function animateStrokes(svgEl, strokes, color) {
+  if (_numAnimFrame) { cancelAnimationFrame(_numAnimFrame); _numAnimFrame = null; }
+
+  const paths = svgEl.querySelectorAll('.stroke-path');
+  // 初始化：全部隐藏（dashoffset = totalLen）
+  const lengths = Array.from(paths).map(p => {
+    const len = p.getTotalLength();
+    p.style.strokeDasharray = len;
+    p.style.strokeDashoffset = len;
+    return len;
+  });
+
+  const strokeDuration = 1800; // 每笔 1800ms（慢速）
+  const strokeGap = 200;       // 笔与笔之间间隔
+  let strokeIdx = 0;
+  let strokeStart = null;
+
+  function step(ts) {
+    if (strokeIdx >= paths.length) return;
+    if (!strokeStart) strokeStart = ts;
+    const elapsed = ts - strokeStart;
+    const progress = Math.min(elapsed / strokeDuration, 1);
+    paths[strokeIdx].style.strokeDashoffset = lengths[strokeIdx] * (1 - progress);
+    if (progress < 1) {
+      _numAnimFrame = requestAnimationFrame(step);
+    } else {
+      strokeIdx++;
+      if (strokeIdx < paths.length) {
+        strokeStart = null;
+        setTimeout(() => { _numAnimFrame = requestAnimationFrame(step); }, strokeGap);
+      }
+    }
+  }
+  _numAnimFrame = requestAnimationFrame(step);
+}
+
+// 构建数字 SVG（viewBox 0 0 100 100，支持多笔）
+function buildDigitSVG(digit) {
+  const strokes = DIGIT_STROKES[digit] || [DIGIT_PATHS[digit]];
+  const pathEls = strokes.map(d =>
+    `<path class="stroke-path" d="${d}" fill="none" stroke="#8b5cf6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`
+  ).join('');
+  return `<svg class="digit-anim-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="96" height="96" rx="10" fill="#f8f7ff" stroke="#e2e8f0" stroke-width="2"/>
+    ${pathEls}
+  </svg>`;
+}
+
+// 构建字母 SVG（viewBox 0 0 100 100，支持多笔）
+function buildLetterSVG(letter) {
+  const strokes = LETTER_STROKES[letter.toUpperCase()] || [];
+  const pathEls = strokes.map(d =>
+    `<path class="stroke-path" d="${d}" fill="none" stroke="#f97316" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`
+  ).join('');
+  return `<svg class="digit-anim-svg letter-anim-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="96" height="96" rx="10" fill="#fff7ed" stroke="#fed7aa" stroke-width="2"/>
+    ${pathEls}
+  </svg>`;
+}
+
+function animateDigitSVG(svgEl, digit) {
+  const strokes = DIGIT_STROKES[digit] || [];
+  animateStrokes(svgEl, strokes, '#8b5cf6');
+}
+
+function animateLetterSVG(svgEl, letter) {
+  const strokes = LETTER_STROKES[letter.toUpperCase()] || [];
+  animateStrokes(svgEl, strokes, '#f97316');
+}
+
+let numbersState = { questions:[], index:0, correct:0 };
+
+function startNumbersGame() {
+  const pool = [...NUMBER_DATA].sort(() => Math.random() - 0.5).slice(0, 10);
+  numbersState = { questions: pool, index: 0, correct: 0 };
+  document.getElementById('mathOverlay').classList.add('active');
+  renderNumbersCard();
+}
+
+function renderNumbersCard() {
+  const { questions, index } = numbersState;
+  if (index >= questions.length) { showNumbersComplete(); return; }
+
+  const q = questions[index];
+  document.getElementById('mathProgressText').textContent = `${index + 1} / ${questions.length}`;
+  document.getElementById('mathProgressFill').style.width = `${((index + 1) / questions.length) * 100}%`;
+
+  // 4 options: correct digit + 3 random others
+  const allDigits = NUMBER_DATA.map(d => d.digit);
+  const opts = new Set([q.digit]);
+  while (opts.size < 4) opts.add(allDigits[Math.floor(Math.random() * allDigits.length)]);
+  const optArr = [...opts].sort(() => Math.random() - 0.5);
+
+  document.getElementById('mathContent').innerHTML = `
+    <div class="kids-study-hint">这是数字几？🔢</div>
+    <div class="num-card-wrap">
+      <div class="num-card-top">
+        <div class="num-big-digit">${q.digit}</div>
+        <div class="num-stroke-wrap" id="numStrokeWrap" title="点击重新书写">
+          ${buildDigitSVG(q.digit)}
+          <div class="num-stroke-hint">点击重新书写 ✏️</div>
+        </div>
+      </div>
+      <div class="num-info">
+        <div class="num-zh">${q.zh}  ${q.emoji}</div>
+        <div class="num-things">${q.things}</div>
+      </div>
+    </div>
+    <div class="math-options">${optArr.map(o => `<button class="math-option-btn" onclick="checkNumberAnswer(this,${o},${q.digit})">${o}</button>`).join('')}</div>`;
+
+  const svgEl = document.getElementById('numStrokeWrap')?.querySelector('.digit-anim-svg');
+  if (svgEl) {
+    animateDigitSVG(svgEl, q.digit);
+    document.getElementById('numStrokeWrap').onclick = () => {
+      const s = document.getElementById('numStrokeWrap')?.querySelector('.digit-anim-svg');
+      if (s) animateDigitSVG(s, q.digit);
+    };
+  }
+
+  speak(q.zh, 0.8);
+}
+
+function checkNumberAnswer(btn, selected, answer) {
+  if (btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+  const correct = selected === answer;
+  btn.classList.add(correct ? 'correct' : 'wrong');
+  if (correct) {
+    numbersState.correct++;
+    speak('太棒了！', 1);
+    createStarBurst();
+  } else {
+    speak('再想想！', 0.9);
+    document.querySelectorAll('.math-option-btn').forEach(b => {
+      if (parseInt(b.textContent) === answer) b.classList.add('correct');
+    });
+  }
+  saveMathStats('numbers', correct);
+  document.querySelectorAll('.math-option-btn').forEach(b => b.onclick = null);
+  const nb = document.createElement('button');
+  nb.className = 'math-next-btn';
+  nb.textContent = '下一个 ➡️';
+  nb.onclick = () => { numbersState.index++; renderNumbersCard(); };
+  document.querySelector('.math-options').after(nb);
+}
+
+function showNumbersComplete() {
+  const { correct, questions } = numbersState;
+  document.getElementById('mathContent').innerHTML = `
+    <div class="kids-complete">
+      <div class="kids-complete-emoji">🎉</div>
+      <div class="kids-complete-title">数字学完啦！</div>
+      <div class="kids-complete-stats">答对 ${correct} / ${questions.length} 题</div>
+      <button class="kids-complete-btn" onclick="closeMathOverlay()">回到算数 🔢</button>
+    </div>`;
+  speak(`太棒了！你认识了${correct}个数字！`, 0.9);
+  createStarBurst(); setTimeout(createStarBurst, 500);
+}
+
 function startMathGame(diff) {
+  if (diff === 'numbers') { startNumbersGame(); return; }
   mathState = { questions:[], index:0, correct:0, difficulty:diff };
   for(let i=0;i<10;i++) mathState.questions.push(generateMathQ(diff));
   document.getElementById('mathOverlay').classList.add('active');
@@ -1269,14 +1542,32 @@ function renderEnglishCard() {
   const wordBtn = mode==='alphabet'
     ? `<button class="english-word-btn" onclick="event.stopPropagation();speakEn('${q.answer}')">🔊 ${q.answer}</button>`
     : '';
+  const letterStroke = mode==='alphabet'
+    ? `<div class="letter-stroke-wrap" id="letterStrokeWrap" title="点击重新书写">
+        ${buildLetterSVG(q.question)}
+        <div class="num-stroke-hint">点击重新书写 ✏️</div>
+       </div>`
+    : '';
   document.getElementById('englishContent').innerHTML = `
     <div class="kids-study-hint">选出正确答案！🤔</div>
     <div class="english-word-card" onclick="speakEn('${speakText}')">
       <div class="english-word-emoji">${q.emoji}</div>
       <div class="english-word-text">${q.question}</div>
+      ${letterStroke}
       ${wordBtn}
     </div>
     <div class="english-options">${shuffled.map(o=>`<button class="english-option-btn" onclick="checkEngAnswer(this,'${o}','${q.answer}')">${o}</button>`).join('')}</div>`;
+  if (mode === 'alphabet') {
+    const svgEl = document.getElementById('letterStrokeWrap')?.querySelector('.digit-anim-svg');
+    if (svgEl) {
+      animateLetterSVG(svgEl, q.question);
+      document.getElementById('letterStrokeWrap').onclick = (e) => {
+        e.stopPropagation();
+        const s = document.getElementById('letterStrokeWrap')?.querySelector('.digit-anim-svg');
+        if (s) animateLetterSVG(s, q.question);
+      };
+    }
+  }
 }
 
 function speakEn(text) {
