@@ -20,7 +20,7 @@ function buildPrompt(word) {
 6. 整段输出必须是合法 JSON，且只输出 JSON`;
 }
 
-function callClaude(prompt, model = 'haiku', timeoutMs = 60000) {
+function callClaude(prompt, model = 'haiku', timeoutMs = 120000) {
   return new Promise((resolve, reject) => {
     const child = spawn('claude', ['-p', '--model', model, '--output-format=json'], {
       stdio: ['pipe', 'pipe', 'pipe']
@@ -67,7 +67,7 @@ function validate(data) {
   };
 }
 
-async function enrichWord(word, { model = 'haiku', timeoutMs = 60000 } = {}) {
+async function enrichWord(word, { model = 'haiku', timeoutMs = 120000 } = {}) {
   const data = await callClaude(buildPrompt(word), model, timeoutMs);
   return validate(data);
 }

@@ -1210,6 +1210,7 @@ async function renderPendingWords() {
 async function enrichPending() {
   const btn = document.getElementById('enrichBtn');
   const status = document.getElementById('enrichStatus');
+  const log = document.getElementById('enrichLog');
   if (!btn || btn.disabled) return;
 
   // 先确认 pending 非空
@@ -1223,16 +1224,60 @@ async function enrichPending() {
   } catch (e) { return; }
 
   btn.disabled = true;
-  status.textContent = '正在补全… 这可能需要一会儿';
+  status.textContent = '正在补全…';
+  log.style.display = 'block';
+  log.innerHTML = '';
+
+  const appendLog = (text, color) => {
+    const line = document.createElement('div');
+    line.style.color = color || '#333';
+    line.textContent = text;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  };
+
   try {
-    const result = await api('/api/pending/enrich', { method: 'POST', body: { concurrency: 3 } });
-    if (!result.batch) {
-      status.textContent = result.message || '已完成';
-    } else {
-      const b = result.batch;
-      status.textContent = `批次 #${b.id}：新增 ${b.added_count}，跳过 ${b.skipped_count}，失败 ${b.failed_count}`;
-      showToast(`补全完成：新增 ${b.added_count}，跳过 ${b.skipped_count}，失败 ${b.failed_count}`, 'success');
+    const resp = await fetch('/api/pending/enrich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (const part of parts) {
+        const line = part.trim();
+        if (!line.startsWith('data:')) continue;
+        let evt;
+        try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+
+        if (evt.type === 'start') {
+          appendLog(`开始补全 ${evt.total} 个词（批次 #${evt.batchId}）`, '#666');
+        } else if (evt.type === 'item') {
+          if (evt.status === 'added') {
+            appendLog(`✓ ${evt.word}  ${evt.chinese || ''}`, '#2a7a2a');
+          } else if (evt.status === 'skipped') {
+            appendLog(`— ${evt.word}  已存在，跳过`, '#888');
+          } else {
+            appendLog(`✗ ${evt.word}  ${evt.error || '失败'}`, '#c0392b');
+          }
+        } else if (evt.type === 'done') {
+          const b = evt.batch;
+          status.textContent = `批次 #${b.id}：新增 ${b.added_count}，跳过 ${b.skipped_count}，失败 ${b.failed_count}`;
+          appendLog(`完成：新增 ${b.added_count}，跳过 ${b.skipped_count}，失败 ${b.failed_count}`, '#444');
+          showToast(`补全完成：新增 ${b.added_count}，跳过 ${b.skipped_count}，失败 ${b.failed_count}`, 'success');
+        }
+      }
     }
+
     await renderPendingWords();
     await renderBatchHistory();
   } catch (e) {
