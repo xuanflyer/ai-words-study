@@ -1648,7 +1648,7 @@ async function startStoryRecord() {
       if (timerEl) timerEl.style.display = 'none';
       uploadStoryRecording();
     };
-    _mediaRecorder.start();
+    _mediaRecorder.start(200);
 
     // 更新 UI
     const btn = document.getElementById('storyRecordBtn');
