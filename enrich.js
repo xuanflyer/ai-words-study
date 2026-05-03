@@ -73,7 +73,7 @@ async function enrichWord(word, { model = 'haiku', timeoutMs = 60000 } = {}) {
 }
 
 // 简单的并发池
-async function enrichBatch(words, { concurrency = 3, model = 'haiku', onItem } = {}) {
+async function enrichBatch(words, { concurrency = 1, model = 'haiku', onItem } = {}) {
   const queue = words.slice();
   const results = [];
   async function worker() {
