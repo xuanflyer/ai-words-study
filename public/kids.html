@@ -284,6 +284,18 @@
           <p class="kids-hero-subtitle">精彩故事，边听边看，快乐成长！</p>
         </div>
         <div class="kids-story-grid" id="storyGrid"></div>
+
+        <!-- 故事总结录音区 -->
+        <div class="story-summary-section">
+          <div class="story-summary-title">🎤 今天的故事总结</div>
+          <div class="story-summary-desc">说说你今天听到了什么故事？用自己的话讲一讲吧！</div>
+          <button class="story-record-btn" id="storyRecordBtn" onclick="toggleStoryRecord()">
+            <span class="story-record-icon">🎙️</span>
+            <span class="story-record-label" id="storyRecordLabel">开始录音</span>
+          </button>
+          <div class="story-record-timer" id="storyRecordTimer" style="display:none">录音中 <span id="storyRecordSec">0</span>s</div>
+          <div class="story-summaries-list" id="storySummariesList"></div>
+        </div>
       </section>
 
       <!-- 故事 - 阅读 -->
@@ -380,19 +392,9 @@
         <div class="story-lock-emoji">😌</div>
         <div class="story-lock-title">休息一下吧！</div>
         <div class="story-lock-tip">眼睛累了，先休息休息哦～</div>
+        <div class="story-lock-tip">回去讲讲你听到的故事吧！</div>
         <div class="story-lock-countdown" id="storyLockCountdown">5:00</div>
         <div class="story-lock-subtitle">分钟后可以继续</div>
-
-        <div class="story-summary-section">
-          <div class="story-summary-title">📝 说说你听到的故事吧！</div>
-          <div class="story-summary-desc">点击下面的按钮，用自己的话讲一讲故事内容</div>
-          <button class="story-record-btn" id="storyRecordBtn" onclick="toggleStoryRecord()">
-            <span class="story-record-icon">🎙️</span>
-            <span class="story-record-label" id="storyRecordLabel">开始录音</span>
-          </button>
-          <div class="story-record-timer" id="storyRecordTimer" style="display:none">录音中 <span id="storyRecordSec">0</span>s</div>
-          <div class="story-summaries-list" id="storySummariesList"></div>
-        </div>
       </div>
     </div>
 

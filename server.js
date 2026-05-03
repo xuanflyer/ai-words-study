@@ -472,14 +472,16 @@ app.post('/api/kids/stories/:id/plays', (req, res) => {
   res.status(201).json({ success: true, ...result });
 });
 
-// 故事语音总结 — 上传录音
+// 故事语音总结 — 上传录音（storyId 可为 'global' 表示今日总结）
 const SUMMARIES_DIR = path.join(__dirname, 'public', 'audio', 'summaries');
 fs.mkdirSync(SUMMARIES_DIR, { recursive: true });
 
 app.post('/api/kids/stories/:id/summaries', (req, res) => {
   const storyId = req.params.id;
-  const story = (storiesData.stories || []).find(s => s.id === storyId);
-  if (!story) return res.status(404).json({ error: '未找到故事' });
+  if (storyId !== 'global') {
+    const story = (storiesData.stories || []).find(s => s.id === storyId);
+    if (!story) return res.status(404).json({ error: '未找到故事' });
+  }
 
   const chunks = [];
   req.on('data', chunk => chunks.push(chunk));
@@ -501,7 +503,7 @@ app.post('/api/kids/stories/:id/summaries', (req, res) => {
   req.on('error', () => res.status(500).json({ error: '上传失败' }));
 });
 
-// 故事语音总结 — 列表
+// 故事语音总结 — 列表（storyId 可为 'global'）
 app.get('/api/kids/stories/:id/summaries', (req, res) => {
   const storyId = req.params.id;
   let files;

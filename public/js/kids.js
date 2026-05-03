@@ -332,11 +332,18 @@ function enterModule(mod) {
   if (mod === 'literacy') switchView('home');
   else if (mod === 'math') switchView('math-home');
   else if (mod === 'english') switchView('english-home');
-  else if (mod === 'story') switchView('story-home');
+  else if (mod === 'story') { switchView('story-home'); startStoryModuleTimer(); }
   else if (mod === 'stats-overview') switchView('stats-overview');
 }
 
 function goHub() {
+  // 离开故事模块时停止计时器
+  if (currentModule === 'story') {
+    clearStoryLimitTimer();
+    clearInterval(_storyLockTimer);
+    const overlay = document.getElementById('storyLockOverlay');
+    if (overlay) overlay.classList.remove('active');
+  }
   currentModule = null;
   updateTabs(null);
   switchView('hub');
@@ -1311,13 +1318,15 @@ function showEnglishComplete() {
 // ============ 故事模块 ============
 let storyState = { story:null, paraIndex:0, playing:false, rate:0.85, startedAt:0, reported:false };
 
-// 故事5分钟限时计时器
+// 故事5分钟限时计时器（整个故事模块累计，进入模块时启动）
 const STORY_MAX_MS = 5 * 60 * 1000; // 5分钟
 let _storyLimitTimer = null;
 let _storyLockTimer = null;  // 锁定期5分钟解锁倒计时
 let _storyLockRemain = 0;
+let _storyModuleEnteredAt = 0; // 进入故事模块的时间
 
-function startStoryLimitTimer() {
+function startStoryModuleTimer() {
+  _storyModuleEnteredAt = Date.now();
   clearTimeout(_storyLimitTimer);
   _storyLimitTimer = setTimeout(() => {
     triggerStoryLock();
@@ -1342,9 +1351,6 @@ function triggerStoryLock() {
   // 显示锁定浮层
   const overlay = document.getElementById('storyLockOverlay');
   if (overlay) overlay.classList.add('active');
-
-  // 加载已有录音
-  if (storyState.story) loadStorySummaries(storyState.story.id);
 
   // 5分钟解锁倒计时
   _storyLockRemain = 5 * 60;
@@ -1372,7 +1378,7 @@ function unlockStory() {
   const overlay = document.getElementById('storyLockOverlay');
   if (overlay) overlay.classList.remove('active');
   speak('好了，可以继续听故事啦！', 0.85);
-  startStoryLimitTimer(); // 重新计时
+  startStoryModuleTimer(); // 重新计时
 }
 
 function formatDuration(sec) {
@@ -1414,6 +1420,8 @@ async function loadStoryHome() {
     console.error('加载故事失败:', e);
     grid.innerHTML = '<div class="kids-message">加载失败，请重试</div>';
   }
+
+  loadStorySummaries('global');
 }
 
 async function openStory(id) {
@@ -1426,7 +1434,6 @@ async function openStory(id) {
     storyState = { story, paraIndex:0, playing:false, rate:0.85, startedAt: Date.now(), reported: false };
     switchView('story-read');
     renderStoryReader();
-    startStoryLimitTimer();
   } catch (e) {
     console.error('打开故事失败:', e);
     showToast('网络错误');
@@ -1593,12 +1600,9 @@ function exitStory() {
   if (_speakAudio) { _speakAudio.pause(); _speakAudio = null; }
   window.speechSynthesis && window.speechSynthesis.cancel();
   reportStoryPlay();
-  clearStoryLimitTimer();
-  clearInterval(_storyLockTimer);
   // 关闭锁定浮层（如有）
   const overlay = document.getElementById('storyLockOverlay');
   if (overlay) overlay.classList.remove('active');
-  stopStoryRecord();
   storyState = { story:null, paraIndex:0, playing:false, rate:0.85, startedAt:0, reported:false };
   switchView('story-home');
 }
@@ -1672,22 +1676,19 @@ function stopStoryRecord() {
 
 async function uploadStoryRecording() {
   if (_recordChunks.length === 0) return;
-  const storyId = storyState.story && storyState.story.id;
-  if (!storyId) return;
-
   const blob = new Blob(_recordChunks, { type: 'audio/webm' });
   _recordChunks = [];
 
   showToast('正在保存录音...');
   try {
-    const res = await fetch(`/api/kids/stories/${storyId}/summaries`, {
+    const res = await fetch('/api/kids/stories/global/summaries', {
       method: 'POST',
       headers: { 'Content-Type': 'audio/webm' },
       body: blob
     });
     if (res.ok) {
       showToast('录音保存成功！');
-      loadStorySummaries(storyId);
+      loadStorySummaries('global');
     } else {
       showToast('保存失败，请重试');
     }

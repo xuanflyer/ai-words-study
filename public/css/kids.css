@@ -1826,7 +1826,8 @@ body {
   background: #f8fafc;
   border-radius: 18px;
   padding: 20px 16px;
-  margin-top: 4px;
+  margin-top: 20px;
+  margin-bottom: 16px;
 }
 .story-summary-title { font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
 .story-summary-desc { font-size: 13px; color: #64748b; margin-bottom: 16px; }
